@@ -12,11 +12,8 @@ import { Note, Tool, Stroke, NoteImage, PageBackground } from '../types'
 
 const BACKGROUNDS: PageBackground[] = ['blank', 'ruled', 'grid']
 
-// Web版では Alert.alert の複数ボタンが動作しないため window.confirm を使う
 function confirmAsync(message: string): Promise<boolean> {
-  if (Platform.OS === 'web') {
-    return Promise.resolve(window.confirm(message))
-  }
+  if (Platform.OS === 'web') return Promise.resolve(window.confirm(message))
   return new Promise((resolve) => {
     Alert.alert('確認', message, [
       { text: 'キャンセル', style: 'cancel', onPress: () => resolve(false) },
@@ -35,11 +32,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   const [penW, setPenW] = useState(4)
   const [editTitle, setEditTitle] = useState(false)
 
-  useFocusEffect(
-    useCallback(() => {
-      return () => { flush() }
-    }, [flush])
-  )
+  useFocusEffect(useCallback(() => () => flush(), [flush]))
 
   function patch(fn: (n: Note) => Note) {
     if (!note) return
@@ -53,6 +46,19 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     patch((n) => {
       const pages = [...n.pages]
       pages[pageIdx] = { ...pages[pageIdx], strokes: [...pages[pageIdx].strokes, stroke] }
+      return { ...n, pages }
+    })
+  }
+
+  // 消しゴム：該当ストロークを削除
+  function onRemoveStrokes(ids: string[]) {
+    patch((n) => {
+      const pages = [...n.pages]
+      const idSet = new Set(ids)
+      pages[pageIdx] = {
+        ...pages[pageIdx],
+        strokes: pages[pageIdx].strokes.filter((s) => !idSet.has(s.id)),
+      }
       return { ...n, pages }
     })
   }
@@ -77,8 +83,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
 
   function onAddPage() {
     if (!note) return
-    const newPage = makePage()
-    patch((n) => ({ ...n, pages: [...n.pages, newPage] }))
+    patch((n) => ({ ...n, pages: [...n.pages, makePage()] }))
     setPageIdx(note.pages.length)
   }
 
@@ -102,17 +107,14 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
 
   async function onImage() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!perm.granted) {
-      Alert.alert('権限が必要', 'フォトライブラリへのアクセスを許可してください')
-      return
-    }
+    if (!perm.granted) { Alert.alert('権限が必要', 'フォトライブラリへのアクセスを許可してください'); return }
     const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 })
     if (!res.canceled && res.assets?.[0]) {
       const a = res.assets[0]
       const w = 200
-      const ratio = a.height && a.width ? a.height / a.width : 1
       const img: NoteImage = {
-        id: genId(), uri: a.uri, x: 10, y: 10, width: w, height: w * ratio,
+        id: genId(), uri: a.uri, x: 10, y: 10,
+        width: w, height: w * (a.height && a.width ? a.height / a.width : 1),
       }
       patch((n) => {
         const pages = [...n.pages]
@@ -124,9 +126,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
 
   if (!note || !page) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.ldTxt}>読み込み中…</Text>
-      </View>
+      <View style={styles.center}><Text style={styles.ldTxt}>読み込み中…</Text></View>
     )
   }
 
@@ -158,6 +158,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         strokeWidth={penW}
         background={note.background ?? 'blank'}
         onAdd={onStroke}
+        onRemove={onRemoveStrokes}
       />
       <Toolbar
         tool={tool}
