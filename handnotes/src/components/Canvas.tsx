@@ -50,12 +50,11 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+
       onPanResponderGrant(e) {
         const { locationX: x, locationY: y } = e.nativeEvent
         const t = toolRef.current
-
         if (t === 'eraser') {
-          // オブジェクト消しゴム: ストローク全体を削除
           setEraserPos({ x, y })
           const r = Math.max(widthRef.current * 4, 20)
           const hit = strokesRef.current
@@ -64,8 +63,6 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
           if (hit.length) onRemoveRef.current(hit)
           return
         }
-
-        // ペン or ピクセル消しゴム: ストローク追加
         const s: Stroke = {
           id: genId(),
           tool: t,
@@ -76,10 +73,10 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
         cur.current = s
         setLive({ ...s })
       },
+
       onPanResponderMove(e) {
         const { locationX: x, locationY: y } = e.nativeEvent
         const t = toolRef.current
-
         if (t === 'eraser') {
           setEraserPos({ x, y })
           const r = Math.max(widthRef.current * 4, 20)
@@ -89,26 +86,29 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
           if (hit.length) onRemoveRef.current(hit)
           return
         }
-
         if (!cur.current) return
         cur.current.points.push({ x, y })
         setLive({ ...cur.current, points: [...cur.current.points] })
       },
+
       onPanResponderRelease() {
-        if (toolRef.current === 'eraser') {
-          setEraserPos(null)
-          return
-        }
+        if (toolRef.current === 'eraser') { setEraserPos(null); return }
         if (cur.current && cur.current.points.length) {
           onAddRef.current({ ...cur.current })
         }
         cur.current = null
         setLive(null)
       },
+
+      // スワイプに横取りされたときの後片付け
+      onPanResponderTerminate() {
+        cur.current = null
+        setLive(null)
+        setEraserPos(null)
+      },
     })
   ).current
 
-  // 背景線
   const bgLines: React.ReactNode[] = []
   if (size.width > 0 && size.height > 0) {
     if (background === 'ruled') {
@@ -122,9 +122,8 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
     }
   }
 
-  // インクとピクセル消しゴムを分離
   const inkStrokes = strokes.filter(s => s.tool !== 'eraser-pixel')
-  const eraserPixelStrokes = strokes.filter(s => s.tool === 'eraser-pixel')
+  const pixelEraserStrokes = strokes.filter(s => s.tool === 'eraser-pixel')
   const liveIsPixelEraser = live?.tool === 'eraser-pixel'
   const eraserR = Math.max(strokeWidth * 4, 20)
 
@@ -132,78 +131,41 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
     <View style={st.root} onLayout={onLayout}>
       <View style={StyleSheet.absoluteFill} {...pr.panHandlers}>
         <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-
-          {/* 背景線（マスク対象外・常に最背面） */}
           {bgLines}
-
           {size.width > 0 && (
             <>
-              {/* SVGマスク定義: 白=描画、黒=消しゴム */}
               <Defs>
                 <Mask id="inkMask">
                   <Rect x={0} y={0} width={size.width} height={size.height} fill="white" />
-                  {eraserPixelStrokes.map(s => (
-                    <Path
-                      key={s.id}
-                      d={pts2path(s.points)}
-                      stroke="black"
-                      strokeWidth={s.width}
-                      strokeLinecap="round"
-                      fill="none"
-                    />
+                  {pixelEraserStrokes.map(s => (
+                    <Path key={s.id} d={pts2path(s.points)} stroke="black"
+                      strokeWidth={s.width} strokeLinecap="round" fill="none" />
                   ))}
                   {liveIsPixelEraser && live && (
-                    <Path
-                      d={pts2path(live.points)}
-                      stroke="black"
-                      strokeWidth={live.width}
-                      strokeLinecap="round"
-                      fill="none"
-                    />
+                    <Path d={pts2path(live.points)} stroke="black"
+                      strokeWidth={live.width} strokeLinecap="round" fill="none" />
                   )}
                 </Mask>
               </Defs>
-
-              {/* マスク適用グループ: 画像・インクストローク */}
               <G mask="url(#inkMask)">
                 {images.map(img => (
-                  <SvgImage key={img.id} href={img.uri} x={img.x} y={img.y} width={img.width} height={img.height} />
+                  <SvgImage key={img.id} href={img.uri}
+                    x={img.x} y={img.y} width={img.width} height={img.height} />
                 ))}
                 {inkStrokes.map(s => (
-                  <Path
-                    key={s.id}
-                    d={pts2path(s.points)}
-                    stroke={s.color}
-                    strokeWidth={s.width}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
+                  <Path key={s.id} d={pts2path(s.points)} stroke={s.color}
+                    strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" fill="none" />
                 ))}
                 {!liveIsPixelEraser && live && (
-                  <Path
-                    d={pts2path(live.points)}
-                    stroke={live.color}
-                    strokeWidth={live.width}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
+                  <Path d={pts2path(live.points)} stroke={live.color}
+                    strokeWidth={live.width} strokeLinecap="round" strokeLinejoin="round" fill="none" />
                 )}
               </G>
             </>
           )}
-
-          {/* 消しゴムカーソル */}
           {eraserPos && (
-            <Circle
-              cx={eraserPos.x}
-              cy={eraserPos.y}
-              r={eraserR}
-              fill="rgba(120,120,120,0.15)"
-              stroke="#999"
-              strokeWidth={1.5}
-            />
+            <Circle cx={eraserPos.x} cy={eraserPos.y} r={eraserR}
+              fill="rgba(120,120,120,0.15)" stroke="#999" strokeWidth={1.5} />
           )}
         </Svg>
       </View>

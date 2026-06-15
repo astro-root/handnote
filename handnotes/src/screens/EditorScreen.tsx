@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
 import { makePage, genId } from '../storage/storage'
 import { useNotes } from '../hooks/useNotes'
-import { Canvas } from '../components/Canvas'
+import { PageSwiper } from '../components/PageSwiper'
 import { Toolbar } from '../components/Toolbar'
 import { PageTabs } from '../components/PageTabs'
 import { EditorHeader } from '../components/EditorHeader'
@@ -14,18 +14,18 @@ const BACKGROUNDS: PageBackground[] = ['blank', 'ruled', 'grid']
 
 function confirmAsync(message: string): Promise<boolean> {
   if (Platform.OS === 'web') return Promise.resolve(window.confirm(message))
-  return new Promise((resolve) => {
+  return new Promise(resolve =>
     Alert.alert('確認', message, [
       { text: 'キャンセル', style: 'cancel', onPress: () => resolve(false) },
       { text: 'OK', style: 'destructive', onPress: () => resolve(true) },
     ])
-  })
+  )
 }
 
 export function EditorScreen({ route, navigation }: { route: any; navigation: any }) {
   const { noteId } = route.params as { noteId: string }
   const { notes, setNotes, flush } = useNotes()
-  const note = notes.find((n) => n.id === noteId) ?? null
+  const note = notes.find(n => n.id === noteId) ?? null
   const [pageIdx, setPageIdx] = useState(0)
   const [tool, setTool] = useState<Tool>('pen')
   const [color, setColor] = useState('#000000')
@@ -37,34 +37,28 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   function patch(fn: (n: Note) => Note) {
     if (!note) return
     const next = { ...fn(note), updatedAt: Date.now() }
-    setNotes(notes.map((n) => (n.id === next.id ? next : n)))
+    setNotes(notes.map(n => n.id === next.id ? next : n))
   }
 
-  const page = note?.pages[pageIdx]
-
   function onStroke(stroke: Stroke) {
-    patch((n) => {
+    patch(n => {
       const pages = [...n.pages]
       pages[pageIdx] = { ...pages[pageIdx], strokes: [...pages[pageIdx].strokes, stroke] }
       return { ...n, pages }
     })
   }
 
-  // 消しゴム：該当ストロークを削除
   function onRemoveStrokes(ids: string[]) {
-    patch((n) => {
+    patch(n => {
       const pages = [...n.pages]
       const idSet = new Set(ids)
-      pages[pageIdx] = {
-        ...pages[pageIdx],
-        strokes: pages[pageIdx].strokes.filter((s) => !idSet.has(s.id)),
-      }
+      pages[pageIdx] = { ...pages[pageIdx], strokes: pages[pageIdx].strokes.filter(s => !idSet.has(s.id)) }
       return { ...n, pages }
     })
   }
 
   function onUndo() {
-    patch((n) => {
+    patch(n => {
       const pages = [...n.pages]
       pages[pageIdx] = { ...pages[pageIdx], strokes: pages[pageIdx].strokes.slice(0, -1) }
       return { ...n, pages }
@@ -74,7 +68,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   async function onClear() {
     const ok = await confirmAsync('このページの内容を削除しますか？')
     if (!ok) return
-    patch((n) => {
+    patch(n => {
       const pages = [...n.pages]
       pages[pageIdx] = { ...pages[pageIdx], strokes: [], images: [] }
       return { ...n, pages }
@@ -83,7 +77,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
 
   function onAddPage() {
     if (!note) return
-    patch((n) => ({ ...n, pages: [...n.pages, makePage()] }))
+    patch(n => ({ ...n, pages: [...n.pages, makePage()] }))
     setPageIdx(note.pages.length)
   }
 
@@ -93,12 +87,12 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     if (!ok) return
     const pages = note.pages.filter((_, i) => i !== pageIdx)
     const nextIdx = Math.min(pageIdx, pages.length - 1)
-    patch((n) => ({ ...n, pages }))
+    patch(n => ({ ...n, pages }))
     setPageIdx(nextIdx)
   }
 
   function onBackground() {
-    patch((n) => {
+    patch(n => {
       const cur = n.background ?? 'blank'
       const next = BACKGROUNDS[(BACKGROUNDS.indexOf(cur) + 1) % BACKGROUNDS.length]
       return { ...n, background: next }
@@ -116,7 +110,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         id: genId(), uri: a.uri, x: 10, y: 10,
         width: w, height: w * (a.height && a.width ? a.height / a.width : 1),
       }
-      patch((n) => {
+      patch(n => {
         const pages = [...n.pages]
         pages[pageIdx] = { ...pages[pageIdx], images: [...pages[pageIdx].images, img] }
         return { ...n, pages }
@@ -124,21 +118,19 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     }
   }
 
-  if (!note || !page) {
-    return (
-      <View style={styles.center}><Text style={styles.ldTxt}>読み込み中…</Text></View>
-    )
+  if (!note) {
+    return <View style={st.center}><Text style={st.ldTxt}>読み込み中…</Text></View>
   }
 
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={st.root}>
       <StatusBar barStyle="light-content" backgroundColor="#0d0d1a" />
       <EditorHeader
         title={note.title}
         pageLabel={`${pageIdx + 1} / ${note.pages.length}`}
         editing={editTitle}
         onBack={() => navigation.goBack()}
-        onTitleChange={(t) => patch((n) => ({ ...n, title: t }))}
+        onTitleChange={t => patch(n => ({ ...n, title: t }))}
         onStartEdit={() => setEditTitle(true)}
         onEndEdit={() => setEditTitle(false)}
       />
@@ -147,18 +139,19 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         current={pageIdx}
         onSelect={setPageIdx}
         onDelete={onDeletePage}
-        onPrev={() => setPageIdx((i) => Math.max(0, i - 1))}
-        onNext={() => setPageIdx((i) => Math.min(note.pages.length - 1, i + 1))}
+        onPrev={() => setPageIdx(i => Math.max(0, i - 1))}
+        onNext={() => setPageIdx(i => Math.min(note.pages.length - 1, i + 1))}
       />
-      <Canvas
-        strokes={page.strokes}
-        images={page.images}
+      <PageSwiper
+        pages={note.pages}
+        pageIdx={pageIdx}
         tool={tool}
         color={color}
         strokeWidth={penW}
         background={note.background ?? 'blank'}
         onAdd={onStroke}
         onRemove={onRemoveStrokes}
+        onPageChange={setPageIdx}
       />
       <Toolbar
         tool={tool}
@@ -178,7 +171,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   )
 }
 
-const styles = StyleSheet.create({
+const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0d0d1a' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0d0d1a' },
   ldTxt: { color: '#fff', fontSize: 16 },
