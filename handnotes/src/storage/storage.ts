@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Note, Page, Folder, PaperSize } from '../types'
+import { Note, Page, Folder, PaperSize, Orientation } from '../types'
 
-const NOTES_KEY = 'handnotes_v1'
+const NOTES_KEY   = 'handnotes_v1'
 const FOLDERS_KEY = 'handnotes_folders_v1'
 
 export const genId = (): string =>
@@ -9,10 +9,14 @@ export const genId = (): string =>
 
 export const makePage = (): Page => ({ id: genId(), strokes: [], images: [] })
 
-export const makeNote = (title: string, folderId?: string, paperSize: PaperSize = 'a4'): Note => ({
+export const makeNote = (
+  title: string, folderId?: string,
+  paperSize: PaperSize = 'a4',
+  orientation: Orientation = 'portrait',
+): Note => ({
   id: genId(), title,
   createdAt: Date.now(), updatedAt: Date.now(),
-  background: 'blank', paperSize, folderId,
+  background: 'blank', paperSize, orientation, folderId,
   pages: [makePage()],
 })
 

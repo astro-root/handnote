@@ -3,22 +3,24 @@ import { SafeAreaView, View, Text, Alert, Platform, StatusBar, StyleSheet } from
 import { useFocusEffect } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
 import { makePage, genId } from '../storage/storage'
-import { useNotes } from '../hooks/useNotes'
-import { PageSwiper } from '../components/PageSwiper'
-import { Toolbar } from '../components/Toolbar'
-import { PageTabs } from '../components/PageTabs'
-import { EditorHeader } from '../components/EditorHeader'
-import { PaperSizePicker } from '../components/PaperSizePicker'
-import { Note, Tool, Stroke, NoteImage, PageBackground, PaperSize, PAPER_SIZES } from '../types'
+import { useNotes }          from '../hooks/useNotes'
+import { PageSwiper }        from '../components/PageSwiper'
+import { Toolbar }           from '../components/Toolbar'
+import { PageTabs }          from '../components/PageTabs'
+import { EditorHeader }      from '../components/EditorHeader'
+import { PaperSizePicker }   from '../components/PaperSizePicker'
+import { BackgroundPicker }  from '../components/BackgroundPicker'
+import {
+  Note, Tool, Stroke, NoteImage,
+  PageBackground, PaperSize, Orientation, PAPER_SIZES,
+} from '../types'
 
-const BACKGROUNDS: PageBackground[] = ['blank', 'ruled', 'grid']
-
-function confirmAsync(message: string): Promise<boolean> {
-  if (Platform.OS === 'web') return Promise.resolve(window.confirm(message))
-  return new Promise(resolve =>
-    Alert.alert('確認', message, [
-      { text: 'キャンセル', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'OK', style: 'destructive', onPress: () => resolve(true) },
+function confirmAsync(msg: string): Promise<boolean> {
+  if (Platform.OS === 'web') return Promise.resolve(window.confirm(msg))
+  return new Promise(r =>
+    Alert.alert('確認', msg, [
+      { text: 'キャンセル', style: 'cancel', onPress: () => r(false) },
+      { text: 'OK', style: 'destructive', onPress: () => r(true) },
     ])
   )
 }
@@ -28,12 +30,13 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   const { notes, setNotes, flush } = useNotes()
   const note = notes.find(n => n.id === noteId) ?? null
 
-  const [pageIdx, setPageIdx] = useState(0)
-  const [tool, setTool] = useState<Tool>('pen')
-  const [color, setColor] = useState('#000000')
-  const [penW, setPenW] = useState(4)
-  const [editTitle, setEditTitle] = useState(false)
-  const [showPaperPicker, setShowPaperPicker] = useState(false)
+  const [pageIdx,          setPageIdx]          = useState(0)
+  const [tool,             setTool]             = useState<Tool>('pen')
+  const [color,            setColor]            = useState('#000000')
+  const [penW,             setPenW]             = useState(4)
+  const [editTitle,        setEditTitle]        = useState(false)
+  const [showPaperPicker,  setShowPaperPicker]  = useState(false)
+  const [showBgPicker,     setShowBgPicker]     = useState(false)
 
   useFocusEffect(useCallback(() => () => flush(), [flush]))
 
@@ -43,9 +46,11 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     setNotes(notes.map(n => n.id === next.id ? next : n))
   }
 
-  // 既存ノート (paperSize 未設定) は free として扱い後方互換を保つ
-  const paperSize: PaperSize = note?.paperSize ?? 'free'
+  const paperSize:  PaperSize   = note?.paperSize  ?? 'free'
+  const orientation: Orientation = note?.orientation ?? 'portrait'
+  const background: PageBackground = note?.background ?? 'blank'
   const sizeLabel = PAPER_SIZES[paperSize].label
+  const orientLabel = orientation === 'landscape' ? '横' : '縦'
 
   function onStroke(stroke: Stroke) {
     patch(n => {
@@ -73,8 +78,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   }
 
   async function onClear() {
-    const ok = await confirmAsync('このページの内容を削除しますか？')
-    if (!ok) return
+    if (!await confirmAsync('このページの内容を削除しますか？')) return
     patch(n => {
       const pages = [...n.pages]
       pages[pageIdx] = { ...pages[pageIdx], strokes: [], images: [] }
@@ -90,24 +94,18 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
 
   async function onDeletePage() {
     if (!note || note.pages.length <= 1) return
-    const ok = await confirmAsync('このページを削除しますか？')
-    if (!ok) return
+    if (!await confirmAsync('このページを削除しますか？')) return
     const pages = note.pages.filter((_, i) => i !== pageIdx)
-    const nextIdx = Math.min(pageIdx, pages.length - 1)
+    const next  = Math.min(pageIdx, pages.length - 1)
     patch(n => ({ ...n, pages }))
-    setPageIdx(nextIdx)
+    setPageIdx(next)
   }
 
-  function onBackground() {
-    patch(n => {
-      const cur = n.background ?? 'blank'
-      const next = BACKGROUNDS[(BACKGROUNDS.indexOf(cur) + 1) % BACKGROUNDS.length]
-      return { ...n, background: next }
-    })
-  }
-
-  function onPaperSizeChange(size: PaperSize) {
-    patch(n => ({ ...n, paperSize: size }))
+  function onOrientation() {
+    patch(n => ({
+      ...n,
+      orientation: (n.orientation ?? 'portrait') === 'portrait' ? 'landscape' : 'portrait',
+    }))
   }
 
   async function onImage() {
@@ -138,7 +136,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
       <StatusBar barStyle="light-content" backgroundColor="#0d0d1a" />
       <EditorHeader
         title={note.title}
-        pageLabel={`${sizeLabel} · ${pageIdx + 1} / ${note.pages.length}`}
+        pageLabel={`${sizeLabel}${paperSize !== 'free' ? ` ${orientLabel}` : ''} · ${pageIdx + 1} / ${note.pages.length}`}
         editing={editTitle}
         onBack={() => navigation.goBack()}
         onTitleChange={t => patch(n => ({ ...n, title: t }))}
@@ -159,39 +157,42 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         tool={tool}
         color={color}
         strokeWidth={penW}
-        background={note.background ?? 'blank'}
+        background={background}
         paperSize={paperSize}
+        orientation={orientation}
         onAdd={onStroke}
         onRemove={onRemoveStrokes}
         onPageChange={setPageIdx}
       />
       <Toolbar
-        tool={tool}
-        color={color}
-        width={penW}
-        background={note.background ?? 'blank'}
-        onTool={setTool}
-        onColor={setColor}
-        onWidth={setPenW}
-        onUndo={onUndo}
-        onClear={onClear}
-        onImage={onImage}
+        tool={tool} color={color} width={penW}
+        background={background} orientation={orientation}
+        onTool={setTool} onColor={setColor} onWidth={setPenW}
+        onUndo={onUndo} onClear={onClear} onImage={onImage}
         onAddPage={onAddPage}
-        onBackground={onBackground}
+        onBackground={() => setShowBgPicker(true)}
         onPaperSize={() => setShowPaperPicker(true)}
+        onOrientation={onOrientation}
       />
+
       <PaperSizePicker
         visible={showPaperPicker}
         current={paperSize}
-        onSelect={onPaperSizeChange}
+        onSelect={size => patch(n => ({ ...n, paperSize: size }))}
         onClose={() => setShowPaperPicker(false)}
+      />
+      <BackgroundPicker
+        visible={showBgPicker}
+        current={background}
+        onSelect={bg => patch(n => ({ ...n, background: bg }))}
+        onClose={() => setShowBgPicker(false)}
       />
     </SafeAreaView>
   )
 }
 
 const st = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0d0d1a' },
+  root:   { flex: 1, backgroundColor: '#0d0d1a' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0d0d1a' },
-  ldTxt: { color: '#fff', fontSize: 16 },
+  ldTxt:  { color: '#fff', fontSize: 16 },
 })

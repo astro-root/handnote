@@ -1,9 +1,10 @@
 import React from 'react'
 import { View, TouchableOpacity, ScrollView } from 'react-native'
-import { Tool, PageBackground } from '../types'
+import { Tool, PageBackground, Orientation } from '../types'
 import {
   PenIcon, EraserIcon, PixelEraserIcon, HandIcon,
-  UndoIcon, TrashIcon, ImageIcon, AddPageIcon, RuledIcon, PageSizeIcon,
+  UndoIcon, TrashIcon, ImageIcon, AddPageIcon,
+  RuledIcon, PageSizeIcon, OrientationIcon,
 } from './icons'
 import { COLORS, WIDTHS, s } from './Toolbar.styles'
 
@@ -12,6 +13,7 @@ interface Props {
   color: string
   width: number
   background: PageBackground
+  orientation: Orientation
   onTool(t: Tool): void
   onColor(c: string): void
   onWidth(w: number): void
@@ -21,39 +23,37 @@ interface Props {
   onAddPage(): void
   onBackground(): void
   onPaperSize(): void
+  onOrientation(): void
 }
 
-const ON = '#ffffff'
-const OFF = '#9a9ac0'
+const ON = '#ffffff', OFF = '#9a9ac0'
 
 export function Toolbar({
-  tool, color, width, background,
+  tool, color, width, background, orientation,
   onTool, onColor, onWidth,
-  onUndo, onClear, onImage, onAddPage, onBackground, onPaperSize,
+  onUndo, onClear, onImage, onAddPage,
+  onBackground, onPaperSize, onOrientation,
 }: Props) {
   return (
     <View style={s.wrap}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>
 
-        {/* 描画ツール */}
-        <Btn active={tool === 'pen'} onPress={() => onTool('pen')}>
-          <PenIcon color={tool === 'pen' ? ON : OFF} />
+        <Btn active={tool === 'pen'}          onPress={() => onTool('pen')}>
+          <PenIcon          color={tool === 'pen'          ? ON : OFF} />
         </Btn>
-        <Btn active={tool === 'eraser'} onPress={() => onTool('eraser')}>
-          <EraserIcon color={tool === 'eraser' ? ON : OFF} />
+        <Btn active={tool === 'eraser'}       onPress={() => onTool('eraser')}>
+          <EraserIcon       color={tool === 'eraser'       ? ON : OFF} />
         </Btn>
         <Btn active={tool === 'eraser-pixel'} onPress={() => onTool('eraser-pixel')}>
-          <PixelEraserIcon color={tool === 'eraser-pixel' ? ON : OFF} />
+          <PixelEraserIcon  color={tool === 'eraser-pixel' ? ON : OFF} />
         </Btn>
-        {/* スクロールツール */}
-        <Btn active={tool === 'scroll'} onPress={() => onTool('scroll')}>
-          <HandIcon color={tool === 'scroll' ? ON : OFF} />
+        <Btn active={tool === 'scroll'}       onPress={() => onTool('scroll')}>
+          <HandIcon         color={tool === 'scroll'       ? ON : OFF} />
         </Btn>
 
         <Div />
 
-        {/* 太さ */}
-        {WIDTHS.map((w) => (
+        {WIDTHS.map(w => (
           <Btn key={w} active={width === w} onPress={() => onWidth(w)}>
             <View style={{
               width: Math.min(w + 6, 24), height: Math.min(w + 6, 24),
@@ -64,24 +64,27 @@ export function Toolbar({
 
         <Div />
 
-        {/* カラー */}
-        {COLORS.map((c) => (
+        {COLORS.map(c => (
           <TouchableOpacity
             key={c}
             onPress={() => onColor(c)}
-            style={[s.dot, { backgroundColor: c }, color === c ? s.dotSel : null, c === '#ffffff' ? s.dotBorder : null]}
+            style={[s.dot, { backgroundColor: c },
+              color === c ? s.dotSel : null,
+              c === '#ffffff' ? s.dotBorder : null,
+            ]}
           />
         ))}
 
         <Div />
 
-        <Btn onPress={onUndo}><UndoIcon color={OFF} /></Btn>
-        <Btn onPress={onClear}><TrashIcon color={OFF} /></Btn>
-        <Btn onPress={onImage}><ImageIcon color={OFF} /></Btn>
+        <Btn onPress={onUndo}><UndoIcon    color={OFF} /></Btn>
+        <Btn onPress={onClear}><TrashIcon  color={OFF} /></Btn>
+        <Btn onPress={onImage}><ImageIcon  color={OFF} /></Btn>
         <Btn onPress={onAddPage}><AddPageIcon color={OFF} /></Btn>
 
         <Div />
 
+        {/* 背景ピッカー */}
         <Btn active={background !== 'blank'} onPress={onBackground}>
           <RuledIcon color={background !== 'blank' ? ON : OFF} />
         </Btn>
@@ -89,6 +92,11 @@ export function Toolbar({
         {/* 紙サイズ */}
         <Btn onPress={onPaperSize}>
           <PageSizeIcon color={OFF} />
+        </Btn>
+
+        {/* 縦横 */}
+        <Btn active={orientation === 'landscape'} onPress={onOrientation}>
+          <OrientationIcon color={orientation === 'landscape' ? ON : OFF} />
         </Btn>
 
       </ScrollView>
