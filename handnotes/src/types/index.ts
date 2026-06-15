@@ -27,5 +27,11 @@ export interface Note {
   createdAt: number
   updatedAt: number
   background?: PageBackground
+  folderId?: string
   pages: Page[]
+}
+export interface Folder {
+  id: string
+  name: string
+  createdAt: number
 }
