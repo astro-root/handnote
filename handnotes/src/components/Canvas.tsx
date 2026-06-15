@@ -1,9 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { View, PanResponder, StyleSheet } from 'react-native'
 import Svg, { Path, Image as SvgImage } from 'react-native-svg'
-import { Stroke, NoteImage, Tool, Point } from '../types'
+import { Stroke, NoteImage, Tool } from '../types'
 import { genId } from '../storage/storage'
- 
+import { pts2path } from '../utils/svgPath'
+
 interface Props {
   strokes: Stroke[]
   images: NoteImage[]
@@ -12,20 +13,7 @@ interface Props {
   strokeWidth: number
   onAdd: (s: Stroke) => void
 }
- 
-function pts2path(pts: Point[]): string {
-  if (!pts.length) return ''
-  if (pts.length === 1) return `M${pts[0].x} ${pts[0].y}l.01 0`
-  let d = `M${pts[0].x} ${pts[0].y}`
-  for (let i = 1; i < pts.length - 1; i++) {
-    const mx = (pts[i].x + pts[i + 1].x) / 2
-    const my = (pts[i].y + pts[i + 1].y) / 2
-    d += ` Q${pts[i].x} ${pts[i].y} ${mx} ${my}`
-  }
-  const lp = pts[pts.length - 1]
-  return `${d} L${lp.x} ${lp.y}`
-}
- 
+
 export function Canvas({ strokes, images, tool, color, strokeWidth, onAdd }: Props) {
   const cur = useRef<Stroke | null>(null)
   const [live, setLive] = useState<Stroke | null>(null)
@@ -33,12 +21,12 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, onAdd }: Pro
   const colorRef = useRef(color)
   const widthRef = useRef(strokeWidth)
   const onAddRef = useRef(onAdd)
- 
+
   useEffect(() => { toolRef.current = tool }, [tool])
   useEffect(() => { colorRef.current = color }, [color])
   useEffect(() => { widthRef.current = strokeWidth }, [strokeWidth])
   useEffect(() => { onAddRef.current = onAdd }, [onAdd])
- 
+
   const pr = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -71,7 +59,7 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, onAdd }: Pro
       },
     })
   ).current
- 
+
   return (
     <View style={st.root} {...pr.panHandlers}>
       <Svg style={StyleSheet.absoluteFill}>
@@ -110,7 +98,7 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, onAdd }: Pro
     </View>
   )
 }
- 
+
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#ffffff' },
 })

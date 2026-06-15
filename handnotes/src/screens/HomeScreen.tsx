@@ -1,22 +1,24 @@
 import React, { useState, useCallback } from 'react'
 import {
   SafeAreaView, View, Text, TextInput, TouchableOpacity,
-  FlatList, Alert, StyleSheet, StatusBar,
+  FlatList, Alert, StatusBar,
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { loadNotes, saveNotes, makeNote } from '../storage/storage'
 import { Note } from '../types'
- 
+import { NotebookIcon, EmptyIcon, TrashIcon } from '../components/icons'
+import { s } from './HomeScreen.styles'
+
 export function HomeScreen({ navigation }: { navigation: any }) {
   const [notes, setNotes] = useState<Note[]>([])
   const [input, setInput] = useState('')
- 
+
   useFocusEffect(
     useCallback(() => {
       loadNotes().then(setNotes)
     }, [])
   )
- 
+
   async function onCreate() {
     const title = input.trim() || `ノート ${new Date().toLocaleDateString('ja-JP')}`
     const note = makeNote(title)
@@ -26,7 +28,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
     setInput('')
     navigation.navigate('Editor', { noteId: note.id })
   }
- 
+
   function onDelete(id: string) {
     Alert.alert('削除', 'このノートを削除しますか？', [
       { text: 'キャンセル', style: 'cancel' },
@@ -41,18 +43,21 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       },
     ])
   }
- 
+
   function fmtDate(ts: number) {
     return new Date(ts).toLocaleDateString('ja-JP', {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
     })
   }
- 
+
   return (
     <SafeAreaView style={s.root}>
       <StatusBar barStyle="light-content" backgroundColor="#0d0d1a" />
       <View style={s.hdr}>
-        <Text style={s.logo}>📓 HandNotes</Text>
+        <View style={s.logoRow}>
+          <NotebookIcon size={22} color="#6c63ff" />
+          <Text style={s.logo}>HandNotes</Text>
+        </View>
         <Text style={s.cnt}>{notes.length}件</Text>
       </View>
       <View style={s.newRow}>
@@ -71,7 +76,9 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       </View>
       {notes.length === 0 ? (
         <View style={s.empty}>
-          <Text style={s.emptyIco}>✍️</Text>
+          <View style={s.emptyIco}>
+            <EmptyIcon size={56} color="#555" />
+          </View>
           <Text style={s.emptyMsg}>{'ノートがまだありません\n上から作成できます'}</Text>
         </View>
       ) : (
@@ -92,7 +99,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                 </Text>
               </View>
               <TouchableOpacity style={s.del} onPress={() => onDelete(item.id)}>
-                <Text style={s.delIco}>🗑️</Text>
+                <TrashIcon size={18} color="#777" />
               </TouchableOpacity>
             </TouchableOpacity>
           )}
@@ -101,61 +108,3 @@ export function HomeScreen({ navigation }: { navigation: any }) {
     </SafeAreaView>
   )
 }
- 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0d0d1a' },
-  hdr: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 4,
-  },
-  logo: { color: '#fff', fontSize: 24, fontWeight: '800', flex: 1 },
-  cnt: { color: '#555', fontSize: 13 },
-  newRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
-  },
-  inp: {
-    flex: 1,
-    backgroundColor: '#1e1e2e',
-    color: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: '#333',
-    marginRight: 8,
-  },
-  addBtn: {
-    backgroundColor: '#6c63ff',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-  },
-  addTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  list: { paddingVertical: 8, paddingHorizontal: 12 },
-  card: {
-    backgroundColor: '#1e1e2e',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 4,
-    borderWidth: 1,
-    borderColor: '#2a2a3e',
-  },
-  cardBody: { flex: 1 },
-  cardTitle: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  cardMeta: { color: '#555', fontSize: 12, marginTop: 3 },
-  del: { padding: 6 },
-  delIco: { fontSize: 18 },
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyIco: { fontSize: 52, marginBottom: 12 },
-  emptyMsg: { color: '#555', fontSize: 15, textAlign: 'center', lineHeight: 22 },
-})
