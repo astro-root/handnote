@@ -1,7 +1,9 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { SafeAreaView, View, Text, Alert, StatusBar, StyleSheet } from 'react-native'
+import { useFocusEffect } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
-import { loadNotes, saveNotes, makePage, genId } from '../storage/storage'
+import { makePage, genId } from '../storage/storage'
+import { useNotes } from '../hooks/useNotes'
 import { Canvas } from '../components/Canvas'
 import { Toolbar } from '../components/Toolbar'
 import { PageTabs } from '../components/PageTabs'
@@ -10,38 +12,27 @@ import { Note, Tool, Stroke, NoteImage } from '../types'
 
 export function EditorScreen({ route, navigation }: { route: any; navigation: any }) {
   const { noteId } = route.params as { noteId: string }
-  const [note, setNote] = useState<Note | null>(null)
-  const [allNotes, setAllNotes] = useState<Note[]>([])
+  const { notes, setNotes, flush } = useNotes()
+  const note = notes.find((n) => n.id === noteId) ?? null
   const [pageIdx, setPageIdx] = useState(0)
   const [tool, setTool] = useState<Tool>('pen')
   const [color, setColor] = useState('#000000')
   const [penW, setPenW] = useState(4)
   const [editTitle, setEditTitle] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    loadNotes().then((ns) => {
-      setAllNotes(ns)
-      setNote(ns.find((n) => n.id === noteId) ?? null)
-    })
-  }, [noteId])
-
-  const persist = useCallback((notes: Note[]) => {
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => saveNotes(notes), 600)
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        flush()
+      }
+    }, [flush])
+  )
 
   function patch(fn: (n: Note) => Note) {
-    setNote((prev) => {
-      if (!prev) return prev
-      const next = { ...fn(prev), updatedAt: Date.now() }
-      setAllNotes((all) => {
-        const updated = all.map((n) => (n.id === next.id ? next : n))
-        persist(updated)
-        return updated
-      })
-      return next
-    })
+    if (!note) return
+    const next = { ...fn(note), updatedAt: Date.now() }
+    const updated = notes.map((n) => (n.id === next.id ? next : n))
+    setNotes(updated)
   }
 
   const page = note?.pages[pageIdx]
@@ -81,13 +72,9 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   function onAddPage() {
     if (!note) return
     const newPage = makePage()
-    const pages = [...note.pages, newPage]
-    const next = { ...note, pages, updatedAt: Date.now() }
-    const updated = allNotes.map((n) => (n.id === next.id ? next : n))
-    setNote(next)
-    setAllNotes(updated)
-    setPageIdx(pages.length - 1)
-    persist(updated)
+    const nextIdx = note.pages.length
+    patch((n) => ({ ...n, pages: [...n.pages, newPage] }))
+    setPageIdx(nextIdx)
   }
 
   async function onImage() {

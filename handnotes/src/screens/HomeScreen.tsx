@@ -1,30 +1,21 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 import {
   SafeAreaView, View, Text, TextInput, TouchableOpacity,
   FlatList, Alert, StatusBar,
 } from 'react-native'
-import { useFocusEffect } from '@react-navigation/native'
-import { loadNotes, saveNotes, makeNote } from '../storage/storage'
-import { Note } from '../types'
+import { makeNote } from '../storage/storage'
+import { useNotes } from '../hooks/useNotes'
 import { NotebookIcon, EmptyIcon, TrashIcon } from '../components/icons'
 import { s } from './HomeScreen.styles'
 
 export function HomeScreen({ navigation }: { navigation: any }) {
-  const [notes, setNotes] = useState<Note[]>([])
+  const { notes, setNotes } = useNotes()
   const [input, setInput] = useState('')
 
-  useFocusEffect(
-    useCallback(() => {
-      loadNotes().then(setNotes)
-    }, [])
-  )
-
-  async function onCreate() {
+  function onCreate() {
     const title = input.trim() || `ノート ${new Date().toLocaleDateString('ja-JP')}`
     const note = makeNote(title)
-    const next = [note, ...notes]
-    await saveNotes(next)
-    setNotes(next)
+    setNotes([note, ...notes], true)
     setInput('')
     navigation.navigate('Editor', { noteId: note.id })
   }
@@ -35,10 +26,8 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       {
         text: '削除',
         style: 'destructive',
-        onPress: async () => {
-          const next = notes.filter((n) => n.id !== id)
-          await saveNotes(next)
-          setNotes(next)
+        onPress: () => {
+          setNotes(notes.filter((n) => n.id !== id), true)
         },
       },
     ])
