@@ -2,8 +2,8 @@ import React from 'react'
 import { View, TouchableOpacity, ScrollView } from 'react-native'
 import { Tool, PageBackground } from '../types'
 import {
-  PenIcon, EraserIcon, PixelEraserIcon, UndoIcon, TrashIcon,
-  ImageIcon, AddPageIcon, RuledIcon,
+  PenIcon, EraserIcon, PixelEraserIcon, HandIcon,
+  UndoIcon, TrashIcon, ImageIcon, AddPageIcon, RuledIcon, PageSizeIcon,
 } from './icons'
 import { COLORS, WIDTHS, s } from './Toolbar.styles'
 
@@ -20,6 +20,7 @@ interface Props {
   onImage(): void
   onAddPage(): void
   onBackground(): void
+  onPaperSize(): void
 }
 
 const ON = '#ffffff'
@@ -28,25 +29,25 @@ const OFF = '#9a9ac0'
 export function Toolbar({
   tool, color, width, background,
   onTool, onColor, onWidth,
-  onUndo, onClear, onImage, onAddPage, onBackground,
+  onUndo, onClear, onImage, onAddPage, onBackground, onPaperSize,
 }: Props) {
   return (
     <View style={s.wrap}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>
 
-        {/* ペン */}
+        {/* 描画ツール */}
         <Btn active={tool === 'pen'} onPress={() => onTool('pen')}>
           <PenIcon color={tool === 'pen' ? ON : OFF} />
         </Btn>
-
-        {/* オブジェクト消しゴム */}
         <Btn active={tool === 'eraser'} onPress={() => onTool('eraser')}>
           <EraserIcon color={tool === 'eraser' ? ON : OFF} />
         </Btn>
-
-        {/* ピクセル消しゴム */}
         <Btn active={tool === 'eraser-pixel'} onPress={() => onTool('eraser-pixel')}>
           <PixelEraserIcon color={tool === 'eraser-pixel' ? ON : OFF} />
+        </Btn>
+        {/* スクロールツール */}
+        <Btn active={tool === 'scroll'} onPress={() => onTool('scroll')}>
+          <HandIcon color={tool === 'scroll' ? ON : OFF} />
         </Btn>
 
         <Div />
@@ -55,10 +56,8 @@ export function Toolbar({
         {WIDTHS.map((w) => (
           <Btn key={w} active={width === w} onPress={() => onWidth(w)}>
             <View style={{
-              width: Math.min(w + 6, 24),
-              height: Math.min(w + 6, 24),
-              borderRadius: 12,
-              backgroundColor: '#fff',
+              width: Math.min(w + 6, 24), height: Math.min(w + 6, 24),
+              borderRadius: 12, backgroundColor: '#fff',
             }} />
           </Btn>
         ))}
@@ -87,6 +86,11 @@ export function Toolbar({
           <RuledIcon color={background !== 'blank' ? ON : OFF} />
         </Btn>
 
+        {/* 紙サイズ */}
+        <Btn onPress={onPaperSize}>
+          <PageSizeIcon color={OFF} />
+        </Btn>
+
       </ScrollView>
     </View>
   )
@@ -99,5 +103,4 @@ function Btn({ active, onPress, children }: { active?: boolean; onPress(): void;
     </TouchableOpacity>
   )
 }
-
 function Div() { return <View style={s.div} /> }

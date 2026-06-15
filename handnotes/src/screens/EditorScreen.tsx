@@ -8,7 +8,8 @@ import { PageSwiper } from '../components/PageSwiper'
 import { Toolbar } from '../components/Toolbar'
 import { PageTabs } from '../components/PageTabs'
 import { EditorHeader } from '../components/EditorHeader'
-import { Note, Tool, Stroke, NoteImage, PageBackground } from '../types'
+import { PaperSizePicker } from '../components/PaperSizePicker'
+import { Note, Tool, Stroke, NoteImage, PageBackground, PaperSize, PAPER_SIZES } from '../types'
 
 const BACKGROUNDS: PageBackground[] = ['blank', 'ruled', 'grid']
 
@@ -26,11 +27,13 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   const { noteId } = route.params as { noteId: string }
   const { notes, setNotes, flush } = useNotes()
   const note = notes.find(n => n.id === noteId) ?? null
+
   const [pageIdx, setPageIdx] = useState(0)
   const [tool, setTool] = useState<Tool>('pen')
   const [color, setColor] = useState('#000000')
   const [penW, setPenW] = useState(4)
   const [editTitle, setEditTitle] = useState(false)
+  const [showPaperPicker, setShowPaperPicker] = useState(false)
 
   useFocusEffect(useCallback(() => () => flush(), [flush]))
 
@@ -39,6 +42,10 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     const next = { ...fn(note), updatedAt: Date.now() }
     setNotes(notes.map(n => n.id === next.id ? next : n))
   }
+
+  // 既存ノート (paperSize 未設定) は free として扱い後方互換を保つ
+  const paperSize: PaperSize = note?.paperSize ?? 'free'
+  const sizeLabel = PAPER_SIZES[paperSize].label
 
   function onStroke(stroke: Stroke) {
     patch(n => {
@@ -99,6 +106,10 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     })
   }
 
+  function onPaperSizeChange(size: PaperSize) {
+    patch(n => ({ ...n, paperSize: size }))
+  }
+
   async function onImage() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!perm.granted) { Alert.alert('権限が必要', 'フォトライブラリへのアクセスを許可してください'); return }
@@ -127,7 +138,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
       <StatusBar barStyle="light-content" backgroundColor="#0d0d1a" />
       <EditorHeader
         title={note.title}
-        pageLabel={`${pageIdx + 1} / ${note.pages.length}`}
+        pageLabel={`${sizeLabel} · ${pageIdx + 1} / ${note.pages.length}`}
         editing={editTitle}
         onBack={() => navigation.goBack()}
         onTitleChange={t => patch(n => ({ ...n, title: t }))}
@@ -149,6 +160,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         color={color}
         strokeWidth={penW}
         background={note.background ?? 'blank'}
+        paperSize={paperSize}
         onAdd={onStroke}
         onRemove={onRemoveStrokes}
         onPageChange={setPageIdx}
@@ -166,6 +178,13 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         onImage={onImage}
         onAddPage={onAddPage}
         onBackground={onBackground}
+        onPaperSize={() => setShowPaperPicker(true)}
+      />
+      <PaperSizePicker
+        visible={showPaperPicker}
+        current={paperSize}
+        onSelect={onPaperSizeChange}
+        onClose={() => setShowPaperPicker(false)}
       />
     </SafeAreaView>
   )

@@ -41,19 +41,19 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
   useEffect(() => { onRemoveRef.current = onRemove }, [onRemove])
   useEffect(() => { strokesRef.current = strokes }, [strokes])
 
-  function onLayout(e: LayoutChangeEvent) {
-    const { width, height } = e.nativeEvent.layout
-    setSize({ width, height })
-  }
+  const isDrawing = () => toolRef.current !== 'scroll'
 
   const pr = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      // scroll ツールのときは描画しない → ScrollView にジェスチャーを渡す
+      onStartShouldSetPanResponder: () => isDrawing(),
+      onMoveShouldSetPanResponder: () => isDrawing(),
 
       onPanResponderGrant(e) {
+        if (!isDrawing()) return
         const { locationX: x, locationY: y } = e.nativeEvent
         const t = toolRef.current
+
         if (t === 'eraser') {
           setEraserPos({ x, y })
           const r = Math.max(widthRef.current * 4, 20)
@@ -63,9 +63,9 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
           if (hit.length) onRemoveRef.current(hit)
           return
         }
+
         const s: Stroke = {
-          id: genId(),
-          tool: t,
+          id: genId(), tool: t,
           color: t === 'eraser-pixel' ? '#000' : colorRef.current,
           width: t === 'eraser-pixel' ? Math.max(widthRef.current * 5, 24) : widthRef.current,
           points: [{ x, y }],
@@ -75,8 +75,10 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
       },
 
       onPanResponderMove(e) {
+        if (!isDrawing()) return
         const { locationX: x, locationY: y } = e.nativeEvent
         const t = toolRef.current
+
         if (t === 'eraser') {
           setEraserPos({ x, y })
           const r = Math.max(widthRef.current * 4, 20)
@@ -86,6 +88,7 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
           if (hit.length) onRemoveRef.current(hit)
           return
         }
+
         if (!cur.current) return
         cur.current.points.push({ x, y })
         setLive({ ...cur.current, points: [...cur.current.points] })
@@ -93,18 +96,14 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
 
       onPanResponderRelease() {
         if (toolRef.current === 'eraser') { setEraserPos(null); return }
-        if (cur.current && cur.current.points.length) {
-          onAddRef.current({ ...cur.current })
-        }
+        if (!isDrawing()) return
+        if (cur.current?.points.length) onAddRef.current({ ...cur.current })
         cur.current = null
         setLive(null)
       },
 
-      // スワイプに横取りされたときの後片付け
       onPanResponderTerminate() {
-        cur.current = null
-        setLive(null)
-        setEraserPos(null)
+        cur.current = null; setLive(null); setEraserPos(null)
       },
     })
   ).current
@@ -128,7 +127,9 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
   const eraserR = Math.max(strokeWidth * 4, 20)
 
   return (
-    <View style={st.root} onLayout={onLayout}>
+    <View style={st.root} onLayout={e => {
+      const { width, height } = e.nativeEvent.layout; setSize({ width, height })
+    }}>
       <View style={StyleSheet.absoluteFill} {...pr.panHandlers}>
         <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
           {bgLines}
