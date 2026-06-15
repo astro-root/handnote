@@ -62,7 +62,7 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, onAdd }: Pro
 
   return (
     <View style={st.root} {...pr.panHandlers}>
-      <Svg style={StyleSheet.absoluteFill}>
+      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
         {images.map((img) => (
           <SvgImage
             key={img.id}
