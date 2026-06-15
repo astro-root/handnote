@@ -1,5 +1,6 @@
 export interface Point { x: number; y: number }
 export type Tool = 'pen' | 'eraser'
+export type PageBackground = 'blank' | 'ruled' | 'grid'
 export interface Stroke {
   id: string
   tool: Tool
@@ -25,5 +26,6 @@ export interface Note {
   title: string
   createdAt: number
   updatedAt: number
+  background?: PageBackground
   pages: Page[]
 }

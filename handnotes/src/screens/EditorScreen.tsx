@@ -8,7 +8,9 @@ import { Canvas } from '../components/Canvas'
 import { Toolbar } from '../components/Toolbar'
 import { PageTabs } from '../components/PageTabs'
 import { EditorHeader } from '../components/EditorHeader'
-import { Note, Tool, Stroke, NoteImage } from '../types'
+import { Note, Tool, Stroke, NoteImage, PageBackground } from '../types'
+
+const BACKGROUNDS: PageBackground[] = ['blank', 'ruled', 'grid']
 
 export function EditorScreen({ route, navigation }: { route: any; navigation: any }) {
   const { noteId } = route.params as { noteId: string }
@@ -77,6 +79,44 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     setPageIdx(nextIdx)
   }
 
+  function onDeletePage() {
+    if (!note || note.pages.length <= 1) return
+    Alert.alert('ページ削除', 'このページを削除しますか？', [
+      { text: 'キャンセル', style: 'cancel' },
+      {
+        text: '削除',
+        style: 'destructive',
+        onPress: () => {
+          const pages = note.pages.filter((_, i) => i !== pageIdx)
+          const nextIdx = Math.min(pageIdx, pages.length - 1)
+          patch((n) => ({ ...n, pages }))
+          setPageIdx(nextIdx)
+        },
+      },
+    ])
+  }
+
+  function onMovePage(dir: -1 | 1) {
+    if (!note) return
+    const newIdx = pageIdx + dir
+    if (newIdx < 0 || newIdx >= note.pages.length) return
+    const pages = [...note.pages]
+    const tmp = pages[pageIdx]
+    pages[pageIdx] = pages[newIdx]
+    pages[newIdx] = tmp
+    patch((n) => ({ ...n, pages }))
+    setPageIdx(newIdx)
+  }
+
+  function onBackground() {
+    patch((n) => {
+      const cur = n.background ?? 'blank'
+      const idx = BACKGROUNDS.indexOf(cur)
+      const next = BACKGROUNDS[(idx + 1) % BACKGROUNDS.length]
+      return { ...n, background: next }
+    })
+  }
+
   async function onImage() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!perm.granted) {
@@ -117,19 +157,28 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         onStartEdit={() => setEditTitle(true)}
         onEndEdit={() => setEditTitle(false)}
       />
-      <PageTabs count={note.pages.length} current={pageIdx} onSelect={setPageIdx} />
+      <PageTabs
+        count={note.pages.length}
+        current={pageIdx}
+        onSelect={setPageIdx}
+        onDelete={onDeletePage}
+        onMoveLeft={() => onMovePage(-1)}
+        onMoveRight={() => onMovePage(1)}
+      />
       <Canvas
         strokes={page.strokes}
         images={page.images}
         tool={tool}
         color={color}
         strokeWidth={penW}
+        background={note.background ?? 'blank'}
         onAdd={onStroke}
       />
       <Toolbar
         tool={tool}
         color={color}
         width={penW}
+        background={note.background ?? 'blank'}
         onTool={setTool}
         onColor={setColor}
         onWidth={setPenW}
@@ -137,6 +186,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         onClear={onClear}
         onImage={onImage}
         onAddPage={onAddPage}
+        onBackground={onBackground}
       />
     </SafeAreaView>
   )

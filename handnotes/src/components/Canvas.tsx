@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react'
-import { View, PanResponder, StyleSheet } from 'react-native'
-import Svg, { Path, Image as SvgImage } from 'react-native-svg'
-import { Stroke, NoteImage, Tool } from '../types'
+import { View, PanResponder, StyleSheet, LayoutChangeEvent } from 'react-native'
+import Svg, { Path, Image as SvgImage, Line } from 'react-native-svg'
+import { Stroke, NoteImage, Tool, PageBackground } from '../types'
 import { genId } from '../storage/storage'
 import { pts2path } from '../utils/svgPath'
 
@@ -11,12 +11,19 @@ interface Props {
   tool: Tool
   color: string
   strokeWidth: number
+  background: PageBackground
   onAdd: (s: Stroke) => void
 }
 
-export function Canvas({ strokes, images, tool, color, strokeWidth, onAdd }: Props) {
+const RULE_GAP = 32
+const GRID_GAP = 24
+const RULE_COLOR = '#d8e1f5'
+const GRID_COLOR = '#e3e8f3'
+
+export function Canvas({ strokes, images, tool, color, strokeWidth, background, onAdd }: Props) {
   const cur = useRef<Stroke | null>(null)
   const [live, setLive] = useState<Stroke | null>(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
   const toolRef = useRef(tool)
   const colorRef = useRef(color)
   const widthRef = useRef(strokeWidth)
@@ -26,6 +33,11 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, onAdd }: Pro
   useEffect(() => { colorRef.current = color }, [color])
   useEffect(() => { widthRef.current = strokeWidth }, [strokeWidth])
   useEffect(() => { onAddRef.current = onAdd }, [onAdd])
+
+  function onLayout(e: LayoutChangeEvent) {
+    const { width, height } = e.nativeEvent.layout
+    setSize({ width, height })
+  }
 
   const pr = useRef(
     PanResponder.create({
@@ -60,9 +72,32 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, onAdd }: Pro
     })
   ).current
 
+  const bgLines: React.ReactNode[] = []
+  if (size.width > 0 && size.height > 0) {
+    if (background === 'ruled') {
+      for (let y = RULE_GAP; y < size.height; y += RULE_GAP) {
+        bgLines.push(
+          <Line key={`h${y}`} x1={0} y1={y} x2={size.width} y2={y} stroke={RULE_COLOR} strokeWidth={1} />
+        )
+      }
+    } else if (background === 'grid') {
+      for (let y = GRID_GAP; y < size.height; y += GRID_GAP) {
+        bgLines.push(
+          <Line key={`h${y}`} x1={0} y1={y} x2={size.width} y2={y} stroke={GRID_COLOR} strokeWidth={1} />
+        )
+      }
+      for (let x = GRID_GAP; x < size.width; x += GRID_GAP) {
+        bgLines.push(
+          <Line key={`v${x}`} x1={x} y1={0} x2={x} y2={size.height} stroke={GRID_COLOR} strokeWidth={1} />
+        )
+      }
+    }
+  }
+
   return (
-    <View style={st.root} {...pr.panHandlers}>
+    <View style={st.root} onLayout={onLayout} {...pr.panHandlers}>
       <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+        {bgLines}
         {images.map((img) => (
           <SvgImage
             key={img.id}

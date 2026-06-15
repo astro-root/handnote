@@ -13,6 +13,7 @@ export const makeNote = (title: string): Note => ({
   title,
   createdAt: Date.now(),
   updatedAt: Date.now(),
+  background: 'blank',
   pages: [makePage()],
 })
 

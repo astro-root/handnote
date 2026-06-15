@@ -1,8 +1,8 @@
 import React from 'react'
 import { View, TouchableOpacity, ScrollView } from 'react-native'
-import { Tool } from '../types'
+import { Tool, PageBackground } from '../types'
 import {
-  PenIcon, EraserIcon, UndoIcon, TrashIcon, ImageIcon, AddPageIcon,
+  PenIcon, EraserIcon, UndoIcon, TrashIcon, ImageIcon, AddPageIcon, RuledIcon,
 } from './icons'
 import { COLORS, WIDTHS, s } from './Toolbar.styles'
 
@@ -10,6 +10,7 @@ interface Props {
   tool: Tool
   color: string
   width: number
+  background: PageBackground
   onTool(t: Tool): void
   onColor(c: string): void
   onWidth(w: number): void
@@ -17,15 +18,16 @@ interface Props {
   onClear(): void
   onImage(): void
   onAddPage(): void
+  onBackground(): void
 }
 
 const ACTIVE = '#ffffff'
 const INACTIVE = '#9a9ac0'
 
 export function Toolbar({
-  tool, color, width,
+  tool, color, width, background,
   onTool, onColor, onWidth,
-  onUndo, onClear, onImage, onAddPage,
+  onUndo, onClear, onImage, onAddPage, onBackground,
 }: Props) {
   return (
     <View style={s.wrap}>
@@ -69,6 +71,10 @@ export function Toolbar({
         <Btn onPress={onClear}><TrashIcon color={INACTIVE} /></Btn>
         <Btn onPress={onImage}><ImageIcon color={INACTIVE} /></Btn>
         <Btn onPress={onAddPage}><AddPageIcon color={INACTIVE} /></Btn>
+        <Div />
+        <Btn active={background !== 'blank'} onPress={onBackground}>
+          <RuledIcon color={background !== 'blank' ? ACTIVE : INACTIVE} />
+        </Btn>
       </ScrollView>
     </View>
   )
