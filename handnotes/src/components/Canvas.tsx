@@ -17,8 +17,8 @@ interface Props {
 
 const RULE_GAP = 32
 const GRID_GAP = 24
-const RULE_COLOR = '#d8e1f5'
-const GRID_COLOR = '#e3e8f3'
+const RULE_COLOR = '#c8d4f0'
+const GRID_COLOR = '#dde4f5'
 
 export function Canvas({ strokes, images, tool, color, strokeWidth, background, onAdd }: Props) {
   const cur = useRef<Stroke | null>(null)
@@ -72,64 +72,79 @@ export function Canvas({ strokes, images, tool, color, strokeWidth, background, 
     })
   ).current
 
+  // 背景線（罫線/グリッド）を別レイヤーで描画するためのノード生成
   const bgLines: React.ReactNode[] = []
   if (size.width > 0 && size.height > 0) {
     if (background === 'ruled') {
       for (let y = RULE_GAP; y < size.height; y += RULE_GAP) {
         bgLines.push(
-          <Line key={`h${y}`} x1={0} y1={y} x2={size.width} y2={y} stroke={RULE_COLOR} strokeWidth={1} />
+          <Line key={`h${y}`} x1={0} y1={y} x2={size.width} y2={y}
+            stroke={RULE_COLOR} strokeWidth={1} />
         )
       }
     } else if (background === 'grid') {
       for (let y = GRID_GAP; y < size.height; y += GRID_GAP) {
         bgLines.push(
-          <Line key={`h${y}`} x1={0} y1={y} x2={size.width} y2={y} stroke={GRID_COLOR} strokeWidth={1} />
+          <Line key={`h${y}`} x1={0} y1={y} x2={size.width} y2={y}
+            stroke={GRID_COLOR} strokeWidth={1} />
         )
       }
       for (let x = GRID_GAP; x < size.width; x += GRID_GAP) {
         bgLines.push(
-          <Line key={`v${x}`} x1={x} y1={0} x2={x} y2={size.height} stroke={GRID_COLOR} strokeWidth={1} />
+          <Line key={`v${x}`} x1={x} y1={0} x2={x} y2={size.height}
+            stroke={GRID_COLOR} strokeWidth={1} />
         )
       }
     }
   }
 
   return (
-    <View style={st.root} onLayout={onLayout} {...pr.panHandlers}>
-      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-        {bgLines}
-        {images.map((img) => (
-          <SvgImage
-            key={img.id}
-            href={img.uri}
-            x={img.x}
-            y={img.y}
-            width={img.width}
-            height={img.height}
-          />
-        ))}
-        {strokes.map((s) => (
-          <Path
-            key={s.id}
-            d={pts2path(s.points)}
-            stroke={s.color}
-            strokeWidth={s.width}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        ))}
-        {live && (
-          <Path
-            d={pts2path(live.points)}
-            stroke={live.color}
-            strokeWidth={live.width}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        )}
-      </Svg>
+    <View style={st.root} onLayout={onLayout}>
+      {/* 描画レイヤー（タッチ対応） */}
+      <View style={StyleSheet.absoluteFill} {...pr.panHandlers}>
+        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+          {images.map((img) => (
+            <SvgImage
+              key={img.id}
+              href={img.uri}
+              x={img.x}
+              y={img.y}
+              width={img.width}
+              height={img.height}
+            />
+          ))}
+          {strokes.map((s) => (
+            <Path
+              key={s.id}
+              d={pts2path(s.points)}
+              stroke={s.color}
+              strokeWidth={s.width}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ))}
+          {live && (
+            <Path
+              d={pts2path(live.points)}
+              stroke={live.color}
+              strokeWidth={live.width}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          )}
+        </Svg>
+      </View>
+
+      {/* 罫線/グリッドレイヤー（消しゴムで消えないよう最前面・タッチ無効） */}
+      {bgLines.length > 0 && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Svg width="100%" height="100%">
+            {bgLines}
+          </Svg>
+        </View>
+      )}
     </View>
   )
 }

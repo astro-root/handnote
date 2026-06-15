@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { SafeAreaView, View, Text, Alert, StatusBar, StyleSheet } from 'react-native'
+import { SafeAreaView, View, Text, Alert, Platform, StatusBar, StyleSheet } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
 import { makePage, genId } from '../storage/storage'
@@ -11,6 +11,19 @@ import { EditorHeader } from '../components/EditorHeader'
 import { Note, Tool, Stroke, NoteImage, PageBackground } from '../types'
 
 const BACKGROUNDS: PageBackground[] = ['blank', 'ruled', 'grid']
+
+// Web版では Alert.alert の複数ボタンが動作しないため window.confirm を使う
+function confirmAsync(message: string): Promise<boolean> {
+  if (Platform.OS === 'web') {
+    return Promise.resolve(window.confirm(message))
+  }
+  return new Promise((resolve) => {
+    Alert.alert('確認', message, [
+      { text: 'キャンセル', style: 'cancel', onPress: () => resolve(false) },
+      { text: 'OK', style: 'destructive', onPress: () => resolve(true) },
+    ])
+  })
+}
 
 export function EditorScreen({ route, navigation }: { route: any; navigation: any }) {
   const { noteId } = route.params as { noteId: string }
@@ -52,20 +65,14 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     })
   }
 
-  function onClear() {
-    Alert.alert('クリア', 'このページの内容を削除しますか？', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: 'クリア',
-        style: 'destructive',
-        onPress: () =>
-          patch((n) => {
-            const pages = [...n.pages]
-            pages[pageIdx] = { ...pages[pageIdx], strokes: [], images: [] }
-            return { ...n, pages }
-          }),
-      },
-    ])
+  async function onClear() {
+    const ok = await confirmAsync('このページの内容を削除しますか？')
+    if (!ok) return
+    patch((n) => {
+      const pages = [...n.pages]
+      pages[pageIdx] = { ...pages[pageIdx], strokes: [], images: [] }
+      return { ...n, pages }
+    })
   }
 
   function onAddPage() {
@@ -75,21 +82,14 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     setPageIdx(note.pages.length)
   }
 
-  function onDeletePage() {
+  async function onDeletePage() {
     if (!note || note.pages.length <= 1) return
-    Alert.alert('ページ削除', 'このページを削除しますか？', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '削除',
-        style: 'destructive',
-        onPress: () => {
-          const pages = note.pages.filter((_, i) => i !== pageIdx)
-          const nextIdx = Math.min(pageIdx, pages.length - 1)
-          patch((n) => ({ ...n, pages }))
-          setPageIdx(nextIdx)
-        },
-      },
-    ])
+    const ok = await confirmAsync('このページを削除しますか？')
+    if (!ok) return
+    const pages = note.pages.filter((_, i) => i !== pageIdx)
+    const nextIdx = Math.min(pageIdx, pages.length - 1)
+    patch((n) => ({ ...n, pages }))
+    setPageIdx(nextIdx)
   }
 
   function onBackground() {
