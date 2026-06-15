@@ -24,17 +24,14 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
 
   useFocusEffect(
     useCallback(() => {
-      return () => {
-        flush()
-      }
+      return () => { flush() }
     }, [flush])
   )
 
   function patch(fn: (n: Note) => Note) {
     if (!note) return
     const next = { ...fn(note), updatedAt: Date.now() }
-    const updated = notes.map((n) => (n.id === next.id ? next : n))
-    setNotes(updated)
+    setNotes(notes.map((n) => (n.id === next.id ? next : n)))
   }
 
   const page = note?.pages[pageIdx]
@@ -74,9 +71,8 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   function onAddPage() {
     if (!note) return
     const newPage = makePage()
-    const nextIdx = note.pages.length
     patch((n) => ({ ...n, pages: [...n.pages, newPage] }))
-    setPageIdx(nextIdx)
+    setPageIdx(note.pages.length)
   }
 
   function onDeletePage() {
@@ -96,23 +92,10 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     ])
   }
 
-  function onMovePage(dir: -1 | 1) {
-    if (!note) return
-    const newIdx = pageIdx + dir
-    if (newIdx < 0 || newIdx >= note.pages.length) return
-    const pages = [...note.pages]
-    const tmp = pages[pageIdx]
-    pages[pageIdx] = pages[newIdx]
-    pages[newIdx] = tmp
-    patch((n) => ({ ...n, pages }))
-    setPageIdx(newIdx)
-  }
-
   function onBackground() {
     patch((n) => {
       const cur = n.background ?? 'blank'
-      const idx = BACKGROUNDS.indexOf(cur)
-      const next = BACKGROUNDS[(idx + 1) % BACKGROUNDS.length]
+      const next = BACKGROUNDS[(BACKGROUNDS.indexOf(cur) + 1) % BACKGROUNDS.length]
       return { ...n, background: next }
     })
   }
@@ -128,7 +111,9 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
       const a = res.assets[0]
       const w = 200
       const ratio = a.height && a.width ? a.height / a.width : 1
-      const img: NoteImage = { id: genId(), uri: a.uri, x: 10, y: 10, width: w, height: w * ratio }
+      const img: NoteImage = {
+        id: genId(), uri: a.uri, x: 10, y: 10, width: w, height: w * ratio,
+      }
       patch((n) => {
         const pages = [...n.pages]
         pages[pageIdx] = { ...pages[pageIdx], images: [...pages[pageIdx].images, img] }
@@ -150,7 +135,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
       <StatusBar barStyle="light-content" backgroundColor="#0d0d1a" />
       <EditorHeader
         title={note.title}
-        pageLabel={`${pageIdx + 1}/${note.pages.length}`}
+        pageLabel={`${pageIdx + 1} / ${note.pages.length}`}
         editing={editTitle}
         onBack={() => navigation.goBack()}
         onTitleChange={(t) => patch((n) => ({ ...n, title: t }))}
@@ -162,8 +147,8 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         current={pageIdx}
         onSelect={setPageIdx}
         onDelete={onDeletePage}
-        onMoveLeft={() => onMovePage(-1)}
-        onMoveRight={() => onMovePage(1)}
+        onPrev={() => setPageIdx((i) => Math.max(0, i - 1))}
+        onNext={() => setPageIdx((i) => Math.min(note.pages.length - 1, i + 1))}
       />
       <Canvas
         strokes={page.strokes}

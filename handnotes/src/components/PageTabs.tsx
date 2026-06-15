@@ -8,14 +8,21 @@ interface Props {
   current: number
   onSelect: (i: number) => void
   onDelete: () => void
-  onMoveLeft: () => void
-  onMoveRight: () => void
+  onPrev: () => void
+  onNext: () => void
 }
 
-export function PageTabs({ count, current, onSelect, onDelete, onMoveLeft, onMoveRight }: Props) {
-  if (count <= 1) return null
+export function PageTabs({ count, current, onSelect, onDelete, onPrev, onNext }: Props) {
   return (
     <View style={s.wrap}>
+      <TouchableOpacity
+        style={[s.ctrlBtn, current === 0 ? s.ctrlDisabled : null]}
+        onPress={onPrev}
+        disabled={current === 0}
+      >
+        <ChevronLeftIcon size={18} color={current === 0 ? '#444' : '#9a9ac0'} />
+      </TouchableOpacity>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -32,25 +39,24 @@ export function PageTabs({ count, current, onSelect, onDelete, onMoveLeft, onMov
           </TouchableOpacity>
         ))}
       </ScrollView>
-      <View style={s.ctrls}>
-        <TouchableOpacity
-          style={[s.ctrlBtn, current === 0 ? s.ctrlDisabled : null]}
-          onPress={onMoveLeft}
-          disabled={current === 0}
-        >
-          <ChevronLeftIcon size={18} color={current === 0 ? '#444' : '#9a9ac0'} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.ctrlBtn, current === count - 1 ? s.ctrlDisabled : null]}
-          onPress={onMoveRight}
-          disabled={current === count - 1}
-        >
-          <ChevronRightIcon size={18} color={current === count - 1 ? '#444' : '#9a9ac0'} />
-        </TouchableOpacity>
-        <TouchableOpacity style={s.ctrlBtn} onPress={onDelete}>
-          <TrashIcon size={18} color="#ff6b6b" />
-        </TouchableOpacity>
-      </View>
+
+      <TouchableOpacity
+        style={[s.ctrlBtn, current === count - 1 ? s.ctrlDisabled : null]}
+        onPress={onNext}
+        disabled={current === count - 1}
+      >
+        <ChevronRightIcon size={18} color={current === count - 1 ? '#444' : '#9a9ac0'} />
+      </TouchableOpacity>
+
+      <View style={s.sep} />
+
+      <TouchableOpacity
+        style={[s.ctrlBtn, count <= 1 ? s.ctrlDisabled : null]}
+        onPress={onDelete}
+        disabled={count <= 1}
+      >
+        <TrashIcon size={16} color={count <= 1 ? '#444' : '#ff6b6b'} />
+      </TouchableOpacity>
     </View>
   )
 }
