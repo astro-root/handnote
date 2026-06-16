@@ -10,6 +10,7 @@ import { PageTabs }          from '../components/PageTabs'
 import { EditorHeader }      from '../components/EditorHeader'
 import { PaperSizePicker }   from '../components/PaperSizePicker'
 import { BackgroundPicker }  from '../components/BackgroundPicker'
+import { ExportMenu }        from '../components/ExportMenu'
 import {
   Note, Tool, Stroke, NoteImage,
   PageBackground, PaperSize, Orientation, PAPER_SIZES,
@@ -37,6 +38,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   const [editTitle,        setEditTitle]        = useState(false)
   const [showPaperPicker,  setShowPaperPicker]  = useState(false)
   const [showBgPicker,     setShowBgPicker]     = useState(false)
+  const [showExportMenu,   setShowExportMenu]   = useState(false)
 
   useFocusEffect(useCallback(() => () => flush(), [flush]))
 
@@ -46,9 +48,9 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     setNotes(notes.map(n => n.id === next.id ? next : n))
   }
 
-  const paperSize:  PaperSize   = note?.paperSize  ?? 'free'
-  const orientation: Orientation = note?.orientation ?? 'portrait'
-  const background: PageBackground = note?.background ?? 'blank'
+  const paperSize:   PaperSize     = note?.paperSize   ?? 'free'
+  const orientation: Orientation   = note?.orientation ?? 'portrait'
+  const background:  PageBackground = note?.background ?? 'blank'
   const sizeLabel = PAPER_SIZES[paperSize].label
   const orientLabel = orientation === 'landscape' ? '横' : '縦'
 
@@ -173,6 +175,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         onBackground={() => setShowBgPicker(true)}
         onPaperSize={() => setShowPaperPicker(true)}
         onOrientation={onOrientation}
+        onExport={() => setShowExportMenu(true)}
       />
 
       <PaperSizePicker
@@ -186,6 +189,12 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         current={background}
         onSelect={bg => patch(n => ({ ...n, background: bg }))}
         onClose={() => setShowBgPicker(false)}
+      />
+      <ExportMenu
+        visible={showExportMenu}
+        note={note}
+        pageIdx={pageIdx}
+        onClose={() => setShowExportMenu(false)}
       />
     </SafeAreaView>
   )

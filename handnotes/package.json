@@ -14,6 +14,7 @@
     "@types/react": "~19.2.14",
     "expo": "^56.0.11",
     "expo-image-picker": "~56.0.17",
+    "jspdf": "^4.2.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-native": "^0.86.0",

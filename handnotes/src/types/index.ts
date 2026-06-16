@@ -9,13 +9,13 @@ export type PageBackground =
 export type PaperSize  = 'free' | 'a3' | 'a4' | 'a5' | 'b5' | 'letter'
 export type Orientation = 'portrait' | 'landscape'
 
-export const PAPER_SIZES: Record<PaperSize, { label: string; ratio: number; desc: string }> = {
-  free:   { label: 'フリー', ratio: 0,           desc: '制限なし' },
-  a3:     { label: 'A3',     ratio: 420 / 297,   desc: '297 × 420 mm' },
-  a4:     { label: 'A4',     ratio: 297 / 210,   desc: '210 × 297 mm' },
-  a5:     { label: 'A5',     ratio: 210 / 148,   desc: '148 × 210 mm' },
-  b5:     { label: 'B5',     ratio: 250 / 176,   desc: '176 × 250 mm' },
-  letter: { label: 'Letter', ratio: 279.4/215.9, desc: '216 × 279 mm' },
+export const PAPER_SIZES: Record<PaperSize, { label: string; ratio: number; mmWidth: number; desc: string }> = {
+  free:   { label: 'フリー', ratio: 0,            mmWidth: 0,     desc: '制限なし' },
+  a3:     { label: 'A3',     ratio: 420 / 297,    mmWidth: 297,   desc: '297 × 420 mm' },
+  a4:     { label: 'A4',     ratio: 297 / 210,    mmWidth: 210,   desc: '210 × 297 mm' },
+  a5:     { label: 'A5',     ratio: 210 / 148,    mmWidth: 148,   desc: '148 × 210 mm' },
+  b5:     { label: 'B5',     ratio: 250 / 176,    mmWidth: 176,   desc: '176 × 250 mm' },
+  letter: { label: 'Letter', ratio: 279.4/215.9,  mmWidth: 215.9, desc: '216 × 279 mm' },
 }
 
 export const BACKGROUND_INFO: Record<PageBackground, { label: string }> = {
