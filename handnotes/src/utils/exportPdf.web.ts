@@ -1,11 +1,9 @@
-import { jsPDF } from 'jspdf'
 import { Note, Page, PageBackground, PaperSize, Orientation, PAPER_SIZES } from '../types'
 
 function safeFilename(name: string): string {
   return (name || 'note').trim().replace(/[\\/:*?"<>|]+/g, '_') || 'note'
 }
 
-/* ── 背景パターンをCanvas2Dに描画 ── */
 function drawBackground(ctx: CanvasRenderingContext2D, bg: PageBackground, W: number, H: number) {
   const RC = '#c8d4f0', GC = '#dde4f5', DC = '#b8c8e0', AC = '#b0a0e8'
   ctx.save()
@@ -70,7 +68,6 @@ function drawBackground(ctx: CanvasRenderingContext2D, bg: PageBackground, W: nu
   ctx.restore()
 }
 
-/* ── 1本のストロークを滑らかに描画（オンスクリーン描画と同じ補間） ── */
 function drawStroke(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[], color: string, width: number) {
   if (points.length < 2) {
     if (points.length === 1) {
@@ -95,7 +92,6 @@ function drawStroke(ctx: CanvasRenderingContext2D, points: { x: number; y: numbe
   ctx.stroke()
 }
 
-/* ── ページをCanvasに描画してPNG dataURLへ ── */
 async function renderPageWeb(page: Page, background: PageBackground, W: number, H: number): Promise<string> {
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -105,7 +101,6 @@ async function renderPageWeb(page: Page, background: PageBackground, W: number, 
   ctx.fillRect(0, 0, W, H)
   drawBackground(ctx, background, W, H)
 
-  // インクと画像は別レイヤーに描き、ピクセル消しゴムで「destination-out」で切り抜く
   const inkCanvas = document.createElement('canvas')
   inkCanvas.width = W
   inkCanvas.height = H
@@ -144,7 +139,6 @@ function pageDimensions(note: Note, page: Page) {
   const orientation: Orientation = note.orientation ?? 'portrait'
 
   if (paperSize === 'free') {
-    // ストローク・画像のバウンディングボックスから推定。空ページはA4既定。
     let maxX = 0, maxY = 0
     page.strokes.forEach(s => s.points.forEach(p => {
       maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y)
@@ -163,9 +157,10 @@ function pageDimensions(note: Note, page: Page) {
   return { pxW: mm2px(mmW), pxH: mm2px(mmH), mmW, mmH }
 }
 
-/* ── ノート全体をPDF化してダウンロード ── */
+/* jsPDFはエクスポート実行時だけ動的に読み込む（起動時のバンドル評価に含めない） */
 export async function exportNoteToPdf(note: Note, onProgress?: (i: number, total: number) => void) {
-  let doc: jsPDF | null = null
+  const { jsPDF } = await import('jspdf')
+  let doc: any = null
 
   for (let i = 0; i < note.pages.length; i++) {
     const page = note.pages[i]
@@ -179,10 +174,9 @@ export async function exportNoteToPdf(note: Note, onProgress?: (i: number, total
     onProgress?.(i + 1, note.pages.length)
   }
 
-  doc!.save(`${safeFilename(note.title)}.pdf`)
+  doc.save(`${safeFilename(note.title)}.pdf`)
 }
 
-/* ── 現在のページのみPNGで保存 ── */
 export async function exportPageToPng(note: Note, pageIdx: number) {
   const page = note.pages[pageIdx]
   const { pxW, pxH } = pageDimensions(note, page)
