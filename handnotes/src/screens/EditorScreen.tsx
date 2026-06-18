@@ -71,6 +71,34 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     })
   }
 
+  function onRemoveImages(ids: string[]) {
+    patch(n => {
+      const pages = [...n.pages]
+      const idSet = new Set(ids)
+      pages[pageIdx] = { ...pages[pageIdx], images: pages[pageIdx].images.filter(img => !idSet.has(img.id)) }
+      return { ...n, pages }
+    })
+  }
+
+  function onMoveItems(strokeIds: string[], imageIds: string[], dx: number, dy: number) {
+    patch(n => {
+      const pages = [...n.pages]
+      const sIdSet = new Set(strokeIds)
+      const iIdSet = new Set(imageIds)
+      const page = pages[pageIdx]
+      pages[pageIdx] = {
+        ...page,
+        strokes: page.strokes.map(s =>
+          sIdSet.has(s.id) ? { ...s, points: s.points.map(p => ({ x: p.x + dx, y: p.y + dy })) } : s
+        ),
+        images: page.images.map(img =>
+          iIdSet.has(img.id) ? { ...img, x: img.x + dx, y: img.y + dy } : img
+        ),
+      }
+      return { ...n, pages }
+    })
+  }
+
   function onUndo() {
     patch(n => {
       const pages = [...n.pages]
@@ -164,6 +192,8 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
         orientation={orientation}
         onAdd={onStroke}
         onRemove={onRemoveStrokes}
+        onRemoveImages={onRemoveImages}
+        onMoveItems={onMoveItems}
         onPageChange={setPageIdx}
       />
       <Toolbar

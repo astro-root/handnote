@@ -15,13 +15,15 @@ interface Props {
   orientation: Orientation
   onAdd(s: Stroke): void
   onRemove(ids: string[]): void
+  onRemoveImages(ids: string[]): void
+  onMoveItems(strokeIds: string[], imageIds: string[], dx: number, dy: number): void
   onPageChange(idx: number): void
 }
 
 export function PageSwiper({
   pages, pageIdx, tool, color, strokeWidth,
   background, paperSize, orientation,
-  onAdd, onRemove, onPageChange,
+  onAdd, onRemove, onRemoveImages, onMoveItems, onPageChange,
 }: Props) {
   const pageIdxRef      = useRef(pageIdx)
   const pagesRef        = useRef(pages)
@@ -49,7 +51,6 @@ export function PageSwiper({
     }
   }
 
-  /* キーボード ← → (Web) */
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return
     const fn = (e: KeyboardEvent) => {
@@ -92,6 +93,7 @@ export function PageSwiper({
         background={background} paperSize={paperSize} orientation={orientation}
         curlRef={curlRef}
         onAdd={onAdd} onRemove={onRemove}
+        onRemoveImages={onRemoveImages} onMoveItems={onMoveItems}
       />
     </View>
   )

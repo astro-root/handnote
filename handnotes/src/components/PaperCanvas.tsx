@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { View, ScrollView, StyleSheet } from 'react-native'
 import { Canvas }            from './Canvas'
 import { ZoomControls }      from './ZoomControls'
@@ -19,6 +19,8 @@ interface Props {
   curlRef?: React.RefObject<CurlHandle>
   onAdd(s: Stroke): void
   onRemove(ids: string[]): void
+  onRemoveImages(ids: string[]): void
+  onMoveItems(strokeIds: string[], imageIds: string[], dx: number, dy: number): void
 }
 
 const PAD   = 20
@@ -27,7 +29,8 @@ const MIN_Z = 0.5, MAX_Z = 4, STEP = 0.25
 
 export function PaperCanvas({
   page, tool, color, strokeWidth, background,
-  paperSize, orientation, curlRef, onAdd, onRemove,
+  paperSize, orientation, curlRef,
+  onAdd, onRemove, onRemoveImages, onMoveItems,
 }: Props) {
   const [sz,   setSz]   = useState({ w: 0, h: 0 })
   const [zoom, setZoom] = useState(1)
@@ -39,18 +42,15 @@ export function PaperCanvas({
   const isFree   = paperSize === 'free'
   const isScroll = tool === 'scroll'
 
-  /* 論理的な紙サイズ */
   const baseW = Math.min(sz.w - PAD * 2, MAX_W)
   const ratio  = PAPER_SIZES[paperSize]?.ratio ?? 0
   const effRatio = orientation === 'landscape' ? 1 / ratio : ratio
   const paperW = isFree ? sz.w : baseW
   const paperH = isFree ? sz.h : baseW * effRatio
 
-  /* zoom 後の物理サイズ */
   const canvasW = paperW * zoom
   const canvasH = paperH * zoom
 
-  /* ─── フリーモード ────────────────────────────────────── */
   if (isFree) {
     return (
       <View
@@ -63,8 +63,9 @@ export function PaperCanvas({
               <Canvas
                 strokes={page.strokes} images={page.images}
                 tool={tool} color={color} strokeWidth={strokeWidth}
-                background={background} zoom={zoom}
+                background={background} zoom={zoom} pageId={page.id}
                 onAdd={onAdd} onRemove={onRemove}
+                onRemoveImages={onRemoveImages} onMoveItems={onMoveItems}
               />
             </View>
             <ZoomControls zoom={zoom} onIn={zoomIn} onOut={zoomOut} onReset={zoomReset} />
@@ -74,7 +75,6 @@ export function PaperCanvas({
     )
   }
 
-  /* ─── 紙モード ────────────────────────────────────────── */
   return (
     <View
       style={st.root}
@@ -94,8 +94,9 @@ export function PaperCanvas({
             <Canvas
               strokes={page.strokes} images={page.images}
               tool={tool} color={color} strokeWidth={strokeWidth}
-              background={background} zoom={zoom}
+              background={background} zoom={zoom} pageId={page.id}
               onAdd={onAdd} onRemove={onRemove}
+              onRemoveImages={onRemoveImages} onMoveItems={onMoveItems}
             />
             <PageCurlOverlay ref={curlRef} paperWidth={canvasW} paperHeight={canvasH} />
           </View>

@@ -4,7 +4,7 @@ import { Tool, PageBackground, Orientation } from '../types'
 import {
   PenIcon, EraserIcon, PixelEraserIcon, HandIcon,
   UndoIcon, TrashIcon, ImageIcon, AddPageIcon,
-  RuledIcon, PageSizeIcon, OrientationIcon,
+  RuledIcon, PageSizeIcon, OrientationIcon, ExportIcon, SelectIcon,
 } from './icons'
 import { COLORS, WIDTHS, s } from './Toolbar.styles'
 
@@ -24,6 +24,7 @@ interface Props {
   onBackground(): void
   onPaperSize(): void
   onOrientation(): void
+  onExport(): void
 }
 
 const ON = '#ffffff', OFF = '#9a9ac0'
@@ -32,7 +33,7 @@ export function Toolbar({
   tool, color, width, background, orientation,
   onTool, onColor, onWidth,
   onUndo, onClear, onImage, onAddPage,
-  onBackground, onPaperSize, onOrientation,
+  onBackground, onPaperSize, onOrientation, onExport,
 }: Props) {
   return (
     <View style={s.wrap}>
@@ -46,6 +47,9 @@ export function Toolbar({
         </Btn>
         <Btn active={tool === 'eraser-pixel'} onPress={() => onTool('eraser-pixel')}>
           <PixelEraserIcon  color={tool === 'eraser-pixel' ? ON : OFF} />
+        </Btn>
+        <Btn active={tool === 'select'}       onPress={() => onTool('select')}>
+          <SelectIcon       color={tool === 'select'       ? ON : OFF} />
         </Btn>
         <Btn active={tool === 'scroll'}       onPress={() => onTool('scroll')}>
           <HandIcon         color={tool === 'scroll'       ? ON : OFF} />
@@ -84,19 +88,20 @@ export function Toolbar({
 
         <Div />
 
-        {/* 背景ピッカー */}
         <Btn active={background !== 'blank'} onPress={onBackground}>
           <RuledIcon color={background !== 'blank' ? ON : OFF} />
         </Btn>
-
-        {/* 紙サイズ */}
         <Btn onPress={onPaperSize}>
           <PageSizeIcon color={OFF} />
         </Btn>
-
-        {/* 縦横 */}
         <Btn active={orientation === 'landscape'} onPress={onOrientation}>
           <OrientationIcon color={orientation === 'landscape' ? ON : OFF} />
+        </Btn>
+
+        <Div />
+
+        <Btn onPress={onExport}>
+          <ExportIcon color={OFF} />
         </Btn>
 
       </ScrollView>

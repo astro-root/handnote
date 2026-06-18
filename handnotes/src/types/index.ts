@@ -1,5 +1,5 @@
 export interface Point { x: number; y: number }
-export type Tool = 'pen' | 'eraser' | 'eraser-pixel' | 'scroll'
+export type Tool = 'pen' | 'eraser' | 'eraser-pixel' | 'scroll' | 'select'
 
 export type PageBackground =
   | 'blank' | 'ruled' | 'ruled-narrow' | 'ruled-wide'
