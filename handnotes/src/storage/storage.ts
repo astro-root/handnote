@@ -7,7 +7,7 @@ const FOLDERS_KEY = 'handnotes_folders_v1'
 export const genId = (): string =>
   `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
-export const makePage = (): Page => ({ id: genId(), strokes: [], images: [] })
+export const makePage = (): Page => ({ id: genId(), strokes: [], images: [], texts: [] })
 
 export const makeNote = (
   title: string, folderId?: string,

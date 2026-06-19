@@ -1,5 +1,5 @@
 export interface Point { x: number; y: number }
-export type Tool = 'pen' | 'eraser' | 'eraser-pixel' | 'scroll' | 'select'
+export type Tool = 'pen' | 'eraser' | 'eraser-pixel' | 'scroll' | 'select' | 'text'
 
 export type PageBackground =
   | 'blank' | 'ruled' | 'ruled-narrow' | 'ruled-wide'
@@ -33,12 +33,13 @@ export const BACKGROUND_INFO: Record<PageBackground, { label: string }> = {
   isometric:      { label: '等角投影' },
 }
 
-export interface Stroke  { id: string; tool: Tool; color: string; width: number; points: Point[] }
+export interface Stroke    { id: string; tool: Tool; color: string; width: number; points: Point[] }
 export interface NoteImage { id: string; uri: string; x: number; y: number; width: number; height: number }
-export interface Page    { id: string; strokes: Stroke[]; images: NoteImage[] }
+export interface TextBlock { id: string; x: number; y: number; text: string; color: string; fontSize: number }
+export interface Page      { id: string; strokes: Stroke[]; images: NoteImage[]; texts: TextBlock[] }
 export interface Note {
   id: string; title: string; createdAt: number; updatedAt: number
   background?: PageBackground; paperSize?: PaperSize; orientation?: Orientation
   folderId?: string; pages: Page[]
 }
-export interface Folder  { id: string; name: string; createdAt: number }
+export interface Folder { id: string; name: string; createdAt: number }
