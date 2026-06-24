@@ -35,6 +35,7 @@ export function PaperCanvas({
   const zoomIn    = () => setZoom(z => +(Math.min(MAX_Z, z + STEP)).toFixed(2))
   const zoomOut   = () => setZoom(z => +(Math.max(MIN_Z, z - STEP)).toFixed(2))
   const zoomReset = () => setZoom(1)
+  const zoomTo    = (v: number) => setZoom(Math.max(MIN_Z, Math.min(MAX_Z, v)))
 
   const isFree = paperSize === 'free', isScroll = tool === 'scroll'
   const baseW = Math.min(sz.w - PAD * 2, MAX_W)
@@ -49,6 +50,7 @@ export function PaperCanvas({
     tool, color, strokeWidth, background, zoom, pageId: page.id,
     onAdd, onRemove, onRemoveImages, onMoveItems,
     onAddText, onUpdateText, onRemoveTexts,
+    onZoomChange: zoomTo,
   }
 
   if (isFree) {

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react'
-import { View, PanResponder, StyleSheet, TouchableOpacity, TextInput } from 'react-native'
+import { View, PanResponder, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native'
 import Svg, {
   Path, Image as SvgImage, Line, Circle,
   Defs, Mask, Rect, G, Text as SvgText, TSpan,
@@ -32,9 +32,9 @@ interface Props {
   onAddText: (tb: TextBlock) => void
   onUpdateText: (id: string, text: string) => void
   onRemoveTexts: (ids: string[]) => void
+  onZoomChange?: (newZoom: number) => void
 }
 
-/* ── 背景レンダリング ─────────────────────────────────────── */
 function mkBg(bg: PageBackground, W: number, H: number): React.ReactNode[] {
   if (W <= 0 || H <= 0) return []
   const RC = '#c8d4f0', GC = '#dde4f5', DC = '#b8c8e0', AC = '#b0a0e8'
@@ -111,7 +111,6 @@ function mkBg(bg: PageBackground, W: number, H: number): React.ReactNode[] {
   return []
 }
 
-/* ── 選択ツール用ヘルパー ──────────────────────────────────── */
 function strokeBBox(s: Stroke) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
   for (const p of s.points) {
@@ -156,7 +155,6 @@ function selectionBBox(
   return { x: minX - pad, y: minY - pad, w: (maxX - minX) + pad * 2, h: (maxY - minY) + pad * 2 }
 }
 
-/* ── テキストヒット判定 ──────────────────────────────────────── */
 function textContainsPoint(tb: TextBlock, px: number, py: number) {
   const lines = tb.text.split('\n')
   const lineH = tb.fontSize * 1.3
@@ -165,13 +163,24 @@ function textContainsPoint(tb: TextBlock, px: number, py: number) {
   return px >= tb.x - 4 && px <= tb.x + estW && py >= tb.y - tb.fontSize && py <= tb.y - tb.fontSize + estH
 }
 
-const DEFAULT_FS = 18
+function touchDistance(touches: any[]): number {
+  const a = touches[0], b = touches[1]
+  const ax = a.pageX ?? a.clientX ?? 0
+  const ay = a.pageY ?? a.clientY ?? 0
+  const bx = b.pageX ?? b.clientX ?? 0
+  const by = b.pageY ?? b.clientY ?? 0
+  const dx = ax - bx, dy = ay - by
+  return Math.sqrt(dx * dx + dy * dy)
+}
 
-/* ── Canvas コンポーネント ──────────────────────────────────── */
+const DEFAULT_FS = 18
+const MIN_ZOOM = 0.5
+const MAX_ZOOM = 4
+
 export function Canvas({
   strokes, images, texts, tool, color, strokeWidth, background, zoom, pageId,
   onAdd, onRemove, onRemoveImages, onMoveItems,
-  onAddText, onUpdateText, onRemoveTexts,
+  onAddText, onUpdateText, onRemoveTexts, onZoomChange,
 }: Props) {
   const textsArr = texts ?? []
 
@@ -196,6 +205,7 @@ export function Canvas({
   const onAddTextRef      = useRef(onAddText)
   const onUpdateTextRef   = useRef(onUpdateText)
   const onRemoveTextsRef  = useRef(onRemoveTexts)
+  const onZoomChangeRef   = useRef(onZoomChange)
   const strokesRef  = useRef(strokes)
   const imagesRef   = useRef(images)
   const textsRef    = useRef(textsArr)
@@ -203,6 +213,12 @@ export function Canvas({
   const selStrokeIdsRef = useRef(selStrokeIds)
   const selImageIdsRef  = useRef(selImageIds)
   const editingTextRef  = useRef<EditingText | null>(null)
+  const textInputRef    = useRef<TextInput>(null)
+  const rootRef         = useRef<View>(null)
+
+  const pinchActive    = useRef(false)
+  const pinchStartDist = useRef(0)
+  const pinchStartZoom = useRef(1)
 
   useEffect(() => { toolRef.current     = tool },        [tool])
   useEffect(() => { colorRef.current    = color },       [color])
@@ -214,6 +230,7 @@ export function Canvas({
   useEffect(() => { onAddTextRef.current      = onAddText      }, [onAddText])
   useEffect(() => { onUpdateTextRef.current   = onUpdateText   }, [onUpdateText])
   useEffect(() => { onRemoveTextsRef.current  = onRemoveTexts  }, [onRemoveTexts])
+  useEffect(() => { onZoomChangeRef.current   = onZoomChange   }, [onZoomChange])
   useEffect(() => { strokesRef.current  = strokes },    [strokes])
   useEffect(() => { imagesRef.current   = images },     [images])
   useEffect(() => { textsRef.current    = textsArr },   [textsArr])
@@ -221,7 +238,6 @@ export function Canvas({
   useEffect(() => { selStrokeIdsRef.current = selStrokeIds }, [selStrokeIds])
   useEffect(() => { selImageIdsRef.current  = selImageIds  }, [selImageIds])
 
-  /* ── テキスト確定 ──────────────────────────────────────────── */
   const commitText = useCallback(() => {
     const et = editingTextRef.current
     if (!et) return
@@ -241,7 +257,6 @@ export function Canvas({
   const commitTextRef = useRef(commitText)
   useEffect(() => { commitTextRef.current = commitText }, [commitText])
 
-  /* ページ切替・ツール切替でリセット */
   const prevPageId = useRef(pageId)
   useEffect(() => {
     if (prevPageId.current !== pageId) {
@@ -257,6 +272,21 @@ export function Canvas({
     if (tool !== 'text') { commitTextRef.current() }
   }, [tool])
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    const node = rootRef.current as unknown as HTMLElement | null
+    if (!node) return
+    const handler = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      const factor = 1 - e.deltaY * 0.01
+      const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomRef.current * factor))
+      onZoomChangeRef.current?.(+next.toFixed(2))
+    }
+    node.addEventListener('wheel', handler, { passive: false })
+    return () => node.removeEventListener('wheel', handler)
+  }, [])
+
   const isDrawing = () => toolRef.current !== 'scroll'
 
   const gestureMode  = useRef<'none' | 'marquee' | 'move'>('none')
@@ -265,10 +295,27 @@ export function Canvas({
 
   const pr = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => isDrawing(),
-      onMoveShouldSetPanResponder:  () => isDrawing(),
+      onStartShouldSetPanResponder: (e) => {
+        const touches = (e.nativeEvent as any).touches
+        if (touches && touches.length >= 2) return true
+        return isDrawing()
+      },
+      onMoveShouldSetPanResponder: (e) => {
+        const touches = (e.nativeEvent as any).touches
+        if (touches && touches.length >= 2) return true
+        return isDrawing()
+      },
 
       onPanResponderGrant(e) {
+        const touches = (e.nativeEvent as any).touches
+        if (touches && touches.length >= 2) {
+          pinchActive.current = true
+          pinchStartDist.current = touchDistance(touches)
+          pinchStartZoom.current = zoomRef.current
+          cur.current = null; setLive(null)
+          gestureMode.current = 'none'; setMarquee(null); setMoveDelta(null)
+          return
+        }
         if (!isDrawing()) return
         const z  = zoomRef.current
         const lx = e.nativeEvent.locationX / z
@@ -283,6 +330,9 @@ export function Canvas({
             : { id: null, x: lx, y: ly, text: '', color: colorRef.current, fontSize: DEFAULT_FS }
           editingTextRef.current = newEt
           setEditingText({ ...newEt })
+          if (Platform.OS === 'web') {
+            setTimeout(() => { textInputRef.current?.focus() }, 0)
+          }
           return
         }
 
@@ -314,6 +364,17 @@ export function Canvas({
       },
 
       onPanResponderMove(e) {
+        const touches = (e.nativeEvent as any).touches
+        if (pinchActive.current) {
+          if (!touches || touches.length < 2) { pinchActive.current = false; pinchStartDist.current = 0; return }
+          const dist = touchDistance(touches)
+          if (pinchStartDist.current > 0) {
+            const scale = dist / pinchStartDist.current
+            const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, pinchStartZoom.current * scale))
+            onZoomChangeRef.current?.(+next.toFixed(2))
+          }
+          return
+        }
         if (!isDrawing()) return
         const z  = zoomRef.current
         const lx = e.nativeEvent.locationX / z
@@ -347,6 +408,7 @@ export function Canvas({
       },
 
       onPanResponderRelease(e) {
+        if (pinchActive.current) { pinchActive.current = false; pinchStartDist.current = 0; return }
         const t = toolRef.current
         if (t === 'text') return
 
@@ -393,6 +455,7 @@ export function Canvas({
       onPanResponderTerminate() {
         cur.current = null; setLive(null); setEraserPos(null)
         gestureMode.current = 'none'; setMarquee(null); setMoveDelta(null)
+        pinchActive.current = false; pinchStartDist.current = 0
       },
     })
   ).current
@@ -416,6 +479,7 @@ export function Canvas({
 
   return (
     <View
+      ref={rootRef}
       style={st.root}
       onLayout={e => { const { width, height } = e.nativeEvent.layout; setSize({ width, height }) }}
     >
@@ -505,6 +569,7 @@ export function Canvas({
 
       {tool === 'text' && editingText && (
         <TextInput
+          ref={textInputRef}
           style={[
             st.textInput,
             {
