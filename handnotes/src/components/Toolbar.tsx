@@ -3,7 +3,7 @@ import { View, TouchableOpacity, ScrollView } from 'react-native'
 import { Tool, PageBackground, Orientation } from '../types'
 import {
   PenIcon, EraserIcon, PixelEraserIcon, HandIcon,
-  UndoIcon, TrashIcon, ImageIcon, AddPageIcon,
+  UndoIcon, RedoIcon, TrashIcon, ImageIcon, AddPageIcon,
   RuledIcon, PageSizeIcon, OrientationIcon, ExportIcon, SelectIcon, TextIcon,
 } from './icons'
 import { COLORS, WIDTHS, s } from './Toolbar.styles'
@@ -11,17 +11,19 @@ import { COLORS, WIDTHS, s } from './Toolbar.styles'
 interface Props {
   tool: Tool; color: string; width: number
   background: PageBackground; orientation: Orientation
+  canUndo: boolean; canRedo: boolean
   onTool(t: Tool): void; onColor(c: string): void; onWidth(w: number): void
-  onUndo(): void; onClear(): void; onImage(): void; onAddPage(): void
+  onUndo(): void; onRedo(): void; onClear(): void; onImage(): void; onAddPage(): void
   onBackground(): void; onPaperSize(): void; onOrientation(): void; onExport(): void
 }
 
-const ON = '#ffffff', OFF = '#9a9ac0'
+const ON = '#ffffff', OFF = '#9a9ac0', DIM = '#4a4a6a'
 
 export function Toolbar({
   tool, color, width, background, orientation,
+  canUndo, canRedo,
   onTool, onColor, onWidth,
-  onUndo, onClear, onImage, onAddPage,
+  onUndo, onRedo, onClear, onImage, onAddPage,
   onBackground, onPaperSize, onOrientation, onExport,
 }: Props) {
   return (
@@ -65,9 +67,14 @@ export function Toolbar({
 
         <Div />
 
-        <Btn onPress={onUndo}><UndoIcon    color={OFF} /></Btn>
-        <Btn onPress={onClear}><TrashIcon  color={OFF} /></Btn>
-        <Btn onPress={onImage}><ImageIcon  color={OFF} /></Btn>
+        <Btn onPress={onUndo} disabled={!canUndo}>
+          <UndoIcon color={canUndo ? OFF : DIM} />
+        </Btn>
+        <Btn onPress={onRedo} disabled={!canRedo}>
+          <RedoIcon color={canRedo ? OFF : DIM} />
+        </Btn>
+        <Btn onPress={onClear}><TrashIcon   color={OFF} /></Btn>
+        <Btn onPress={onImage}><ImageIcon   color={OFF} /></Btn>
         <Btn onPress={onAddPage}><AddPageIcon color={OFF} /></Btn>
 
         <Div />
@@ -88,7 +95,11 @@ export function Toolbar({
   )
 }
 
-function Btn({ active, onPress, children }: { active?: boolean; onPress(): void; children: React.ReactNode }) {
-  return <TouchableOpacity style={[s.btn, active ? s.btnOn : null]} onPress={onPress}>{children}</TouchableOpacity>
+function Btn({ active, disabled, onPress, children }: { active?: boolean; disabled?: boolean; onPress(): void; children: React.ReactNode }) {
+  return (
+    <TouchableOpacity style={[s.btn, active ? s.btnOn : null]} onPress={onPress} disabled={disabled}>
+      {children}
+    </TouchableOpacity>
+  )
 }
 function Div() { return <View style={s.div} /> }

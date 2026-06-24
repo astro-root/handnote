@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { SafeAreaView, View, Text, Alert, Platform, StatusBar, StyleSheet } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
@@ -40,12 +40,41 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   const [showBgPicker,    setShowBgPicker]    = useState(false)
   const [showExportMenu,  setShowExportMenu]  = useState(false)
 
+  const [undoStack, setUndoStack] = useState<Note[]>([])
+  const [redoStack, setRedoStack] = useState<Note[]>([])
+
+  const noteRef  = useRef(note)
+  const notesRef = useRef(notes)
+  useEffect(() => { noteRef.current  = note  }, [note])
+  useEffect(() => { notesRef.current = notes }, [notes])
+
   useFocusEffect(useCallback(() => () => flush(), [flush]))
 
   function patch(fn: (n: Note) => Note) {
-    if (!note) return
-    const next = { ...fn(note), updatedAt: Date.now() }
-    setNotes(notes.map(n => n.id === next.id ? next : n))
+    const cur = noteRef.current
+    if (!cur) return
+    setUndoStack(s => [...s.slice(-49), cur])
+    setRedoStack([])
+    const next = { ...fn(cur), updatedAt: Date.now() }
+    setNotes(notesRef.current.map(n => n.id === next.id ? next : n))
+  }
+
+  function onUndo() {
+    const cur = noteRef.current
+    if (!cur || undoStack.length === 0) return
+    const prev = undoStack[undoStack.length - 1]
+    setRedoStack(s => [...s, cur])
+    setUndoStack(s => s.slice(0, -1))
+    setNotes(notesRef.current.map(n => n.id === cur.id ? prev : n))
+  }
+
+  function onRedo() {
+    const cur = noteRef.current
+    if (!cur || redoStack.length === 0) return
+    const next = redoStack[redoStack.length - 1]
+    setUndoStack(s => [...s, cur])
+    setRedoStack(s => s.slice(0, -1))
+    setNotes(notesRef.current.map(n => n.id === cur.id ? next : n))
   }
 
   const paperSize:  PaperSize      = note?.paperSize  ?? 'free'
@@ -103,10 +132,7 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
   function onUpdateText(id: string, text: string) {
     patch(n => {
       const pages = [...n.pages]
-      pages[pageIdx] = {
-        ...pages[pageIdx],
-        texts: (pages[pageIdx].texts ?? []).map(tb => tb.id === id ? { ...tb, text } : tb),
-      }
+      pages[pageIdx] = { ...pages[pageIdx], texts: (pages[pageIdx].texts ?? []).map(tb => tb.id === id ? { ...tb, text } : tb) }
       return { ...n, pages }
     })
   }
@@ -115,14 +141,6 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
     patch(n => {
       const pages = [...n.pages]; const idSet = new Set(ids)
       pages[pageIdx] = { ...pages[pageIdx], texts: (pages[pageIdx].texts ?? []).filter(tb => !idSet.has(tb.id)) }
-      return { ...n, pages }
-    })
-  }
-
-  function onUndo() {
-    patch(n => {
-      const pages = [...n.pages]
-      pages[pageIdx] = { ...pages[pageIdx], strokes: pages[pageIdx].strokes.slice(0, -1) }
       return { ...n, pages }
     })
   }
@@ -204,8 +222,9 @@ export function EditorScreen({ route, navigation }: { route: any; navigation: an
       <Toolbar
         tool={tool} color={color} width={penW}
         background={background} orientation={orientation}
+        canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
         onTool={setTool} onColor={setColor} onWidth={setPenW}
-        onUndo={onUndo} onClear={onClear} onImage={onImage} onAddPage={onAddPage}
+        onUndo={onUndo} onRedo={onRedo} onClear={onClear} onImage={onImage} onAddPage={onAddPage}
         onBackground={() => setShowBgPicker(true)}
         onPaperSize={() => setShowPaperPicker(true)}
         onOrientation={onOrientation}
